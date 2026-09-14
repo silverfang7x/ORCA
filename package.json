@@ -1,0 +1,13 @@
+{
+  "name": "orca",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "backend",
+    "packages/shared"
+  ],
+  "scripts": {
+    "dev": "echo \"Frontend and backend packages not yet scaffolded.\" && exit 0"
+  },
+  "devDependencies": {}
+}
