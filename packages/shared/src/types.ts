@@ -1,62 +1,57 @@
-// ORCA Shared Type Definitions
-// Stable contract shared between Frontend, Backend, and Agent modules.
-
-export type LanguageCode = 'en' | 'hi' | 'ml' | 'ta' | 'te' | 'kn' | string;
-
-export interface GeoCoordinates {
+export interface LocationQuery {
   latitude: number;
   longitude: number;
-}
-
-export interface UserQueryRequest {
-  id: string;
-  query: string;
-  language?: LanguageCode;
-  location?: GeoCoordinates;
-  timestamp: string;
+  date: string; // ISO format
 }
 
 export interface WeatherOceanData {
-  location: GeoCoordinates;
   waveHeightMeters: number;
-  wavePeriodSeconds: number;
-  windSpeedKmh: number;
-  windDirectionDegrees: number;
   seaSurfaceTempCelsius: number;
-  tideInfo?: {
-    highTideTime: string;
-    lowTideTime: string;
-  };
-  safetyRating: 'SAFE' | 'CAUTION' | 'DANGER';
+  windSpeedKmh: number;
+  tideTimes: { time: string; type: "high" | "low" }[];
+  source: string;
 }
 
-export interface HazardAlert {
-  id: string;
-  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
-  title: string;
-  description: string;
-  coordinates: GeoCoordinates[];
-  activeFrom: string;
-  activeUntil?: string;
+export interface HazardGeofenceData {
+  hazardAlerts: { type: string; severity: string; description: string }[];
+  isInRestrictedZone: boolean;
+  nearestBoundaryName: string | null;
+  source: string;
 }
 
-export interface AgentRecommendation {
-  queryId: string;
-  summary: string;
-  detailedAnalysis: string;
-  safetyStatus: 'SAFE' | 'MODERATE_RISK' | 'HIGH_RISK' | 'UNSAFE';
-  weatherData?: WeatherOceanData;
-  hazards?: HazardAlert[];
-  sources: string[];
-  uncertaintyFlags?: string[];
-  translatedResponse?: string;
-  targetLanguage?: LanguageCode;
-}
-
-export interface SOSBroadcastPayload {
-  alertId: string;
-  fishermanId?: string;
-  location: GeoCoordinates;
+export interface SOSRequest {
+  latitude: number;
+  longitude: number;
   timestamp: string;
-  message?: string;
+  userMessage?: string;
+}
+
+export interface BroadcastAlert {
+  region: string;
+  type: string;
+  severity: "Low" | "Medium" | "High";
+  message: string;
+  issuedAt: string;
+}
+
+export interface ChatMessage {
+  role: "user" | "assistant";
+  content: string;
+  timestamp: string;
+  language?: string;
+}
+
+export interface AgentState {
+  userQuery: string;
+  detectedLanguage: string;
+  translatedQuery: string;
+  location?: LocationQuery;
+  intent: {
+    needsWeather: boolean;
+    needsHazard: boolean;
+  };
+  weatherData?: WeatherOceanData;
+  hazardData?: HazardGeofenceData;
+  finalAnswer: string;
+  sources: string[];
 }
