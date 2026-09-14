@@ -4,6 +4,7 @@ import { plannerAgent } from './agents/plannerAgent';
 import { weatherOceanAgent } from './agents/weatherOceanAgent';
 import { hazardGeofenceAgent } from './agents/hazardGeofenceAgent';
 import { synthesizerAgent } from './agents/synthesizerAgent';
+import { detectLanguage, translateToEnglish, translateFromEnglish } from './multilingual';
 
 export const OrcaStateAnnotation = Annotation.Root({
   userQuery: Annotation<string>({
@@ -81,22 +82,33 @@ const builder = new StateGraph(OrcaStateAnnotation)
 export const orcaGraph = builder.compile();
 
 /**
- * Executes the full ORCA multi-agent LangGraph workflow.
+ * Executes the full ORCA multi-agent LangGraph workflow with multilingual detection and translation.
  */
 export async function runOrcaGraph(
   userQuery: string,
   location?: LocationQuery
 ): Promise<AgentState> {
+  const detectedLang = await detectLanguage(userQuery);
+  const translatedQuery = detectedLang === 'en' 
+    ? userQuery 
+    : await translateToEnglish(userQuery, detectedLang);
+
   const initialState: Partial<typeof OrcaStateAnnotation.State> = {
     userQuery,
-    translatedQuery: userQuery,
-    detectedLanguage: 'en',
+    translatedQuery,
+    detectedLanguage: detectedLang,
     location,
     intent: { needsWeather: true, needsHazard: true },
     sources: [],
     finalAnswer: ''
   };
 
-  const finalState = await orcaGraph.invoke(initialState);
-  return finalState as AgentState;
+  const finalState = (await orcaGraph.invoke(initialState)) as AgentState;
+
+  if (detectedLang !== 'en' && finalState.finalAnswer) {
+    const translatedAnswer = await translateFromEnglish(finalState.finalAnswer, detectedLang);
+    finalState.finalAnswer = translatedAnswer;
+  }
+
+  return finalState;
 }
