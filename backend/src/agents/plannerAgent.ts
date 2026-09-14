@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const DEFAULT_INTENT = { needsWeather: true, needsHazard: true };
+const GROQ_MODELS = ['llama-3.3-70b-versatile', 'openai/gpt-oss-120b', 'groq/compound'];
 
 /**
  * Planner Agent: Analyzes the user's query using Groq LLM
@@ -37,19 +38,30 @@ Classification Rules:
 - "needsHazard": true if query relates to safety, hazard warnings, restricted maritime zones, boundary lines, cyclones, or danger alerts.
 - Set BOTH to true if query asks about overall fishing safety or general advice (e.g. "is it safe to fish near Kochi tomorrow?").`;
 
-    const response = await groq.chat.completions.create({
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: query }
-      ],
-      model: 'llama-3.3-70b-versatile',
-      temperature: 0.1,
-      response_format: { type: 'json_object' }
-    });
+    let content = '';
+    for (const modelName of GROQ_MODELS) {
+      try {
+        const response = await groq.chat.completions.create({
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: query }
+          ],
+          model: modelName,
+          temperature: 0.1,
+          response_format: { type: 'json_object' }
+        });
+        content = response.choices[0]?.message?.content || '';
+        if (content) break;
+      } catch (err) {
+        continue;
+      }
+    }
 
-    const content = response.choices[0]?.message?.content || '';
+    if (!content) {
+      return { intent: DEFAULT_INTENT };
+    }
+
     const parsed = JSON.parse(content);
-
     const needsWeather = typeof parsed.needsWeather === 'boolean' ? parsed.needsWeather : true;
     const needsHazard = typeof parsed.needsHazard === 'boolean' ? parsed.needsHazard : true;
 
