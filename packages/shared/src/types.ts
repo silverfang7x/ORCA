@@ -39,6 +39,7 @@ export interface ChatMessage {
   content: string;
   timestamp: string;
   language?: string;
+  sources?: string[];
 }
 
 export interface AgentState {
