@@ -11,7 +11,7 @@ const DEFAULT_KOCHI_LOCATION: LocationQuery = {
 };
 
 export default function FishermanChatPage() {
-  const [messages, setMessages] = useState<ChatMessage[]>([
+  const [messages, setMessages] = useState<(ChatMessage & { weatherData?: any; hazardData?: any })[]>([
     {
       role: "assistant",
       content: "Namaste! I am ORCA, your ocean safety assistant. Ask me questions like \"Is it safe to fish tomorrow?\" in English or your local language.",
@@ -85,12 +85,14 @@ export default function FishermanChatPage() {
       const data = await res.json();
       const assistantTimestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-      const assistantMessage: ChatMessage = {
+      const assistantMessage: ChatMessage & { weatherData?: any; hazardData?: any } = {
         role: "assistant",
         content: data.finalAnswer || "I wasn't able to generate a complete advisory for this location right now.",
         timestamp: assistantTimestamp,
         sources: data.sources || [],
-        language: data.detectedLanguage
+        language: data.detectedLanguage,
+        weatherData: data.weatherData,
+        hazardData: data.hazardData
       };
 
       setMessages((prev) => [...prev, assistantMessage]);

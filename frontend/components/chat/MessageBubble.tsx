@@ -1,9 +1,11 @@
 import { ChatMessage } from "@orca/shared";
 import { Badge } from "@/components/ui/badge";
 import { Waves, User, ExternalLink, ShieldCheck } from "lucide-react";
+import { ExplainabilityPanel } from "./ExplainabilityPanel";
+import { QuickOverviewList } from "./QuickOverviewList";
 
 interface MessageBubbleProps {
-  message: ChatMessage;
+  message: ChatMessage & { weatherData?: any; hazardData?: any };
 }
 
 export function MessageBubble({ message }: MessageBubbleProps) {
@@ -44,12 +46,22 @@ export function MessageBubble({ message }: MessageBubbleProps) {
             </div>
           )}
 
+          {/* Quick Overview Summary (Rendered inside Assistant Message) */}
+          {!isUser && (message.weatherData || message.hazardData) && (
+            <QuickOverviewList weatherData={message.weatherData} hazardData={message.hazardData} />
+          )}
+
           {/* Message Content */}
           <div className="whitespace-pre-wrap text-slate-200 font-sans tracking-wide">
             {message.content}
           </div>
 
-          {/* Sources Section */}
+          {/* Explainability Panel ("How ORCA Decided") */}
+          {!isUser && message.sources && message.sources.length > 0 && (
+            <ExplainabilityPanel sources={message.sources} />
+          )}
+
+          {/* Cited Sources Section */}
           {!isUser && message.sources && message.sources.length > 0 && (
             <div className="mt-3 pt-2 border-t border-slate-800/60 flex flex-wrap items-center gap-1.5">
               <span className="text-[11px] text-slate-500 font-mono">CITED SOURCES:</span>
