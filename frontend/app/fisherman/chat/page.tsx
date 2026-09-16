@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { ChatMessage, LocationQuery } from "@orca/shared";
 import { ChatWindow } from "@/components/chat/ChatWindow";
 
@@ -10,7 +11,10 @@ const DEFAULT_KOCHI_LOCATION: LocationQuery = {
   date: new Date().toISOString()
 };
 
-export default function FishermanChatPage() {
+function ChatContent() {
+  const searchParams = useSearchParams();
+  const initialQuery = searchParams.get("q");
+
   const [messages, setMessages] = useState<(ChatMessage & { weatherData?: any; hazardData?: any })[]>([
     {
       role: "assistant",
@@ -21,6 +25,7 @@ export default function FishermanChatPage() {
   ]);
 
   const [isLoading, setIsLoading] = useState(false);
+  const [hasAutoSent, setHasAutoSent] = useState(false);
 
   /**
    * Fetches current browser location with timeout fallback to Kochi
@@ -151,6 +156,14 @@ export default function FishermanChatPage() {
     }
   };
 
+  // Auto-send initial query passed via URL search parameter ?q=
+  useEffect(() => {
+    if (initialQuery && !hasAutoSent) {
+      setHasAutoSent(true);
+      handleSendMessage(initialQuery);
+    }
+  }, [initialQuery, hasAutoSent]);
+
   return (
     <main className="min-h-screen bg-slate-950">
       <ChatWindow
@@ -162,3 +175,16 @@ export default function FishermanChatPage() {
     </main>
   );
 }
+
+export default function FishermanChatPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen bg-slate-950 text-slate-400">
+        Loading Chat Assistant...
+      </div>
+    }>
+      <ChatContent />
+    </Suspense>
+  );
+}
+
