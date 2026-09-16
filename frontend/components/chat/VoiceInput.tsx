@@ -24,7 +24,7 @@ export function VoiceInput({ onTranscript, disabled }: VoiceInputProps) {
         const instance = new SpeechRecognition();
         instance.continuous = false;
         instance.interimResults = false;
-        instance.lang = "en-IN"; // Supports English and Indian accent speech recognition
+        instance.lang = "en-IN";
 
         instance.onresult = (event: any) => {
           const transcript = event.results[0]?.[0]?.transcript;
@@ -49,7 +49,7 @@ export function VoiceInput({ onTranscript, disabled }: VoiceInputProps) {
   }, [onTranscript]);
 
   if (!isSupported) {
-    return null; // Gracefully hide mic button if Web Speech API is unsupported
+    return null;
   }
 
   const toggleListening = () => {
@@ -76,7 +76,9 @@ export function VoiceInput({ onTranscript, disabled }: VoiceInputProps) {
       onClick={toggleListening}
       disabled={disabled}
       className={`relative h-10 w-10 shrink-0 transition-all ${
-        isListening ? "animate-pulse ring-2 ring-red-500 shadow-lg shadow-red-500/30" : "bg-slate-800 hover:bg-slate-700 text-cyan-400"
+        isListening
+          ? "animate-pulse ring-2 ring-red-500 shadow-md shadow-red-500/30"
+          : "bg-slate-100 hover:bg-slate-200 text-cyan-700 border border-slate-200"
       }`}
       title={isListening ? "Stop listening" : "Speak your question (Voice Input)"}
     >

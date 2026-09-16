@@ -48,21 +48,21 @@ export function QuickOverviewList({ weatherData, hazardData }: QuickOverviewList
   ];
 
   return (
-    <div className="my-3 p-3 rounded-xl bg-slate-950/80 border border-slate-800 space-y-2 text-xs">
-      <div className="font-semibold text-slate-300 pb-1 border-b border-slate-800/80 flex items-center justify-between">
+    <div className="my-3 p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-2 text-xs">
+      <div className="font-semibold text-slate-700 pb-1 border-b border-slate-200 flex items-center justify-between">
         <span>Quick Overview Summary</span>
-        <span className="text-[10px] text-cyan-400 font-mono">LIVE TELEMETRY</span>
+        <span className="text-[10px] text-cyan-700 font-mono">LIVE TELEMETRY</span>
       </div>
       <div className="space-y-1.5">
         {rows.map((row, idx) => {
           const Icon = row.icon;
           return (
-            <div key={idx} className="flex items-center justify-between py-1 px-2 rounded-lg bg-slate-900/60 border border-slate-800/50">
+            <div key={idx} className="flex items-center justify-between py-1 px-2 rounded-lg bg-white border border-slate-200">
               <div className="flex items-center gap-2">
-                <Icon className="h-3.5 w-3.5 text-cyan-400 shrink-0" />
+                <Icon className="h-3.5 w-3.5 text-cyan-700 shrink-0" />
                 <div>
-                  <div className="font-medium text-slate-200">{row.label}</div>
-                  <div className="text-[10px] text-slate-400">{row.detail}</div>
+                  <div className="font-medium text-slate-900">{row.label}</div>
+                  <div className="text-[10px] text-slate-500">{row.detail}</div>
                 </div>
               </div>
               <Badge

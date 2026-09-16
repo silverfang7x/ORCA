@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import useRouter from "next/navigation";
+import { useState } from "react";
 import Link from "next/link";
 import {
   Compass,
@@ -16,7 +15,6 @@ import {
   ArrowRight,
   TrendingUp,
   FileText,
-  Users,
   CheckCircle2,
   ExternalLink,
 } from "lucide-react";
@@ -60,7 +58,7 @@ export default function FishermanHomePage() {
   const [sosDetails, setSosDetails] = useState<string | null>(null);
 
   // Weather & Ocean state
-  const [weatherState, setWeatherState] = useState({
+  const [weatherState] = useState({
     temp: "28°C",
     condition: "Clear Ocean Sky",
     windSpeed: "14 kn (WNW)",
@@ -72,8 +70,8 @@ export default function FishermanHomePage() {
     safetyStatus: "Moderate Caution",
   });
 
-  // Active hazard alert state (null if no active severe hazards)
-  const [activeHazard, setActiveHazard] = useState<{
+  // Active hazard alert state
+  const [activeHazard] = useState<{
     title: string;
     description: string;
     severity: "high" | "medium";
@@ -91,13 +89,13 @@ export default function FishermanHomePage() {
   ]);
 
   const [heatPoints] = useState<HeatPoint[]>([
-    { lat: 9.975, lng: 76.18, intensity: 0.95 }, // Safe/High PFZ (Green)
-    { lat: 10.02, lng: 76.1, intensity: 0.8 },   // Good zone (Lime)
-    { lat: 9.85, lng: 76.05, intensity: 0.1 },   // Shallow reef hazard (Red)
-    { lat: 9.9, lng: 76.3, intensity: 0.35 },    // Port shipping lane (Orange)
+    { lat: 9.975, lng: 76.18, intensity: 0.95 },
+    { lat: 10.02, lng: 76.1, intensity: 0.8 },
+    { lat: 9.85, lng: 76.05, intensity: 0.1 },
+    { lat: 9.9, lng: 76.3, intensity: 0.35 },
   ]);
 
-  // Handle Search Submission -> route to /fisherman/chat?q=...
+  // Handle Search Submission
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!searchQuery.trim()) return;
@@ -157,27 +155,27 @@ export default function FishermanHomePage() {
   };
 
   return (
-    <div className="space-y-6 pb-12 text-slate-100 max-w-7xl mx-auto px-4 md:px-6 pt-4">
-      {/* 1. Hero Banner */}
-      <section className="relative rounded-2xl bg-gradient-to-r from-slate-900 via-cyan-950 to-slate-900 border border-slate-800 p-6 md:p-8 shadow-xl overflow-hidden">
-        <div className="absolute top-0 right-0 -mt-12 -mr-12 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
-        
+    <div className="space-y-6 pb-12 text-slate-900 max-w-7xl mx-auto px-4 md:px-6 pt-4">
+      {/* 1. Hero Banner: Warm Sunset / Ocean Gradient matching design-references/fisherman-home-mockup.png */}
+      <section className="relative rounded-2xl bg-gradient-to-r from-slate-900 via-cyan-900 to-slate-900 text-white border border-slate-800/20 p-6 md:p-8 shadow-md overflow-hidden">
+        <div className="absolute top-0 right-0 -mt-12 -mr-12 w-64 h-64 bg-cyan-400/10 rounded-full blur-3xl pointer-events-none" />
+
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-900/40 border border-cyan-700/50 text-cyan-300 text-xs font-semibold mb-3">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur border border-white/20 text-cyan-200 text-xs font-semibold mb-3">
               <Compass className="h-3.5 w-3.5 animate-spin" style={{ animationDuration: "12s" }} />
               ORCA Live Marine Intelligence System
             </div>
-            <h1 className="text-2xl md:text-3xl font-extrabold text-white tracking-tight">
+            <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">
               Vanakkam, Fisher! 🌊
             </h1>
-            <p className="text-slate-300 text-sm md:text-base mt-1 max-w-2xl">
-              Real-time sea weather, high-potential fishing zone advisories, and emergency safety monitoring off your coast.
+            <p className="text-slate-200 text-sm md:text-base mt-1 max-w-2xl">
+              Real-time sea weather, potential fishing zone advisories, and emergency safety monitoring off your coast.
             </p>
           </div>
 
           <div className="flex items-center gap-2 self-start md:self-auto">
-            <Badge variant="outline" className="bg-emerald-950/60 border-emerald-500/50 text-emerald-400 py-1.5 px-3 flex items-center gap-1.5">
+            <Badge className="bg-emerald-500/20 border-emerald-400/40 text-emerald-200 py-1.5 px-3 flex items-center gap-1.5 backdrop-blur">
               <span className="h-2 w-2 rounded-full bg-emerald-400 animate-ping" />
               Coastal Sensors Online
             </Badge>
@@ -185,8 +183,8 @@ export default function FishermanHomePage() {
         </div>
       </section>
 
-      {/* 2. Search / Ask ORCA Bar */}
-      <section className="bg-slate-900/90 backdrop-blur border border-slate-800 rounded-2xl p-4 md:p-5 shadow-lg">
+      {/* 2. Search / Ask ORCA Bar: Light Card Styling */}
+      <section className="bg-white border border-slate-200 rounded-2xl p-4 md:p-5 shadow-sm">
         <form onSubmit={handleSearchSubmit} className="flex items-center gap-3">
           <div className="relative flex-1">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
@@ -195,7 +193,7 @@ export default function FishermanHomePage() {
               placeholder="Ask ORCA anything... (e.g. Is it safe off Kochi tomorrow?)"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-11 pr-4 py-3 bg-slate-950/80 border-slate-800 text-slate-100 placeholder:text-slate-500 focus:border-cyan-500 rounded-xl h-12 text-sm md:text-base"
+              className="pl-11 pr-4 py-3 bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-cyan-600 rounded-xl h-12 text-sm md:text-base"
             />
           </div>
 
@@ -203,7 +201,7 @@ export default function FishermanHomePage() {
 
           <Button
             type="submit"
-            className="bg-cyan-600 hover:bg-cyan-500 text-white px-5 h-12 rounded-xl font-semibold flex items-center gap-2 shrink-0"
+            className="bg-cyan-700 hover:bg-cyan-600 text-white px-5 h-12 rounded-xl font-semibold flex items-center gap-2 shrink-0 shadow-sm"
           >
             <span className="hidden sm:inline">Ask ORCA</span>
             <ArrowRight className="h-4 w-4" />
@@ -211,19 +209,19 @@ export default function FishermanHomePage() {
         </form>
       </section>
 
-      {/* 3. Prominent SOS Emergency Button / Banner */}
-      <section className="bg-gradient-to-r from-red-950/90 via-red-900/70 to-slate-900 border-2 border-red-600/80 rounded-2xl p-4 md:p-5 shadow-xl shadow-red-950/30">
+      {/* 3. Prominent SOS Emergency Button / Banner: High-Visibility Red Banner */}
+      <section className="bg-gradient-to-r from-red-50 via-red-100/80 to-red-50 border-2 border-red-500/80 rounded-2xl p-4 md:p-5 shadow-sm">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-start gap-3">
-            <div className="p-3 bg-red-600/20 border border-red-500/50 rounded-xl text-red-400 shrink-0 mt-0.5">
-              <Radio className="h-6 w-6 animate-pulse text-red-400" />
+            <div className="p-3 bg-red-600 text-white rounded-xl shrink-0 mt-0.5 shadow-sm">
+              <Radio className="h-6 w-6 animate-pulse" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-lg font-bold text-white tracking-wide">EMERGENCY DISTRESS SOS</h2>
+                <h2 className="text-lg font-bold text-red-950 tracking-wide">EMERGENCY DISTRESS SOS</h2>
                 <Badge className="bg-red-600 text-white text-xs px-2 py-0.5 font-bold uppercase">High Priority</Badge>
               </div>
-              <p className="text-red-200/90 text-xs md:text-sm mt-0.5">
+              <p className="text-red-900/90 text-xs md:text-sm mt-0.5">
                 In distress? Instantly broadcast your GPS location to Coastal Authority Command & nearby vessels.
               </p>
             </div>
@@ -232,7 +230,7 @@ export default function FishermanHomePage() {
           <Button
             onClick={handleSOSTrigger}
             disabled={isSOSLoading}
-            className="w-full md:w-auto bg-red-600 hover:bg-red-500 text-white font-extrabold px-6 py-6 text-base rounded-xl shadow-lg shadow-red-600/40 border border-red-400 flex items-center justify-center gap-2 shrink-0 transition-transform active:scale-95"
+            className="w-full md:w-auto bg-red-600 hover:bg-red-700 text-white font-extrabold px-6 py-6 text-base rounded-xl shadow-md shadow-red-600/20 border border-red-500 flex items-center justify-center gap-2 shrink-0 transition-transform active:scale-95"
           >
             {isSOSLoading ? (
               <span>Broadcasting Signal...</span>
@@ -247,51 +245,51 @@ export default function FishermanHomePage() {
 
         {/* SOS Confirmation Banner */}
         {sosConfirmed && (
-          <div className="mt-4 p-3 bg-emerald-950/80 border border-emerald-500/60 rounded-xl flex items-start gap-3 text-emerald-200 text-sm animate-fade-in">
-            <CheckCircle2 className="h-5 w-5 text-emerald-400 shrink-0 mt-0.5" />
+          <div className="mt-4 p-3 bg-emerald-50 border border-emerald-300 rounded-xl flex items-start gap-3 text-emerald-900 text-sm animate-fade-in">
+            <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0 mt-0.5" />
             <div>
-              <span className="font-bold text-white">Emergency SOS Broadcast Succeeded!</span>
-              <p className="text-xs text-emerald-300 mt-0.5">{sosDetails}</p>
+              <span className="font-bold">Emergency SOS Broadcast Succeeded!</span>
+              <p className="text-xs text-emerald-800 mt-0.5">{sosDetails}</p>
             </div>
           </div>
         )}
       </section>
 
-      {/* 4. Active Cyclone / Hazard Alert Banner (Conditional) */}
+      {/* 4. Active Cyclone / Hazard Alert Banner */}
       {activeHazard && (
-        <section className="bg-amber-950/70 border border-amber-500/50 rounded-2xl p-4 md:p-5 text-amber-200 flex items-start gap-3.5 shadow-md">
-          <AlertTriangle className="h-6 w-6 text-amber-400 shrink-0 mt-0.5 animate-bounce" style={{ animationDuration: "2s" }} />
+        <section className="bg-amber-50 border border-amber-300 rounded-2xl p-4 md:p-5 text-amber-950 flex items-start gap-3.5 shadow-sm">
+          <AlertTriangle className="h-6 w-6 text-amber-600 shrink-0 mt-0.5 animate-bounce" style={{ animationDuration: "2s" }} />
           <div className="flex-1">
             <div className="flex items-center justify-between">
-              <h3 className="font-bold text-white text-sm md:text-base">{activeHazard.title}</h3>
-              <Badge className="bg-amber-500/20 text-amber-300 border-amber-500/40 text-xs">Active Warning</Badge>
+              <h3 className="font-bold text-amber-950 text-sm md:text-base">{activeHazard.title}</h3>
+              <Badge className="bg-amber-600 text-white text-xs">Active Warning</Badge>
             </div>
-            <p className="text-xs md:text-sm text-amber-200/90 mt-1 leading-relaxed">
+            <p className="text-xs md:text-sm text-amber-900 mt-1 leading-relaxed">
               {activeHazard.description}
             </p>
           </div>
         </section>
       )}
 
-      {/* 5. Three Live Stat Cards (Stack on Mobile, Grid on Desktop) */}
+      {/* 5. Three Live Stat Cards (White Cards, Soft Shadow) */}
       <section className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
         {/* Card 1: Weather */}
-        <Card className="bg-slate-900 border-slate-800 text-slate-100 shadow-md hover:border-slate-700 transition-colors">
+        <Card className="bg-white border-slate-200 text-slate-900 shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="pb-2 flex flex-row items-center justify-between">
-            <CardTitle className="text-sm font-semibold text-slate-300 flex items-center gap-2">
-              <Sun className="h-4 w-4 text-amber-400" />
+            <CardTitle className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+              <Sun className="h-4 w-4 text-amber-500" />
               Sea Weather
             </CardTitle>
-            <Badge variant="outline" className="text-xs text-cyan-400 border-cyan-800">Kochi Coast</Badge>
+            <Badge variant="outline" className="text-xs text-cyan-700 border-cyan-200 bg-cyan-50">Kochi Coast</Badge>
           </CardHeader>
           <CardContent className="space-y-2">
             <div className="flex items-baseline justify-between">
-              <span className="text-3xl font-extrabold text-white">{weatherState.temp}</span>
-              <span className="text-xs font-medium text-slate-400">{weatherState.condition}</span>
+              <span className="text-3xl font-extrabold text-slate-900">{weatherState.temp}</span>
+              <span className="text-xs font-medium text-slate-500">{weatherState.condition}</span>
             </div>
-            <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-300">
+            <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-600">
               <span className="flex items-center gap-1">
-                <Wind className="h-3.5 w-3.5 text-cyan-400" />
+                <Wind className="h-3.5 w-3.5 text-cyan-600" />
                 Wind: {weatherState.windSpeed}
               </span>
               <span>Humidity: {weatherState.humidity}</span>
@@ -300,26 +298,26 @@ export default function FishermanHomePage() {
         </Card>
 
         {/* Card 2: Tide Status */}
-        <Card className="bg-slate-900 border-slate-800 text-slate-100 shadow-md hover:border-slate-700 transition-colors">
+        <Card className="bg-white border-slate-200 text-slate-900 shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="pb-2 flex flex-row items-center justify-between">
-            <CardTitle className="text-sm font-semibold text-slate-300 flex items-center gap-2">
-              <Waves className="h-4 w-4 text-cyan-400" />
+            <CardTitle className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+              <Waves className="h-4 w-4 text-cyan-600" />
               Tide Information
             </CardTitle>
-            <Badge variant="outline" className="text-xs text-emerald-400 border-emerald-800">Normal Cycle</Badge>
+            <Badge variant="outline" className="text-xs text-emerald-700 border-emerald-200 bg-emerald-50">Normal Cycle</Badge>
           </CardHeader>
           <CardContent className="space-y-2">
             <div className="space-y-1">
               <div className="flex justify-between text-xs">
-                <span className="text-slate-400">High Tide:</span>
-                <span className="font-semibold text-emerald-400">{weatherState.tideHigh}</span>
+                <span className="text-slate-500">High Tide:</span>
+                <span className="font-semibold text-emerald-700">{weatherState.tideHigh}</span>
               </div>
               <div className="flex justify-between text-xs">
-                <span className="text-slate-400">Low Tide:</span>
-                <span className="font-semibold text-amber-400">{weatherState.tideLow}</span>
+                <span className="text-slate-500">Low Tide:</span>
+                <span className="font-semibold text-amber-700">{weatherState.tideLow}</span>
               </div>
             </div>
-            <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-300">
+            <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-600">
               <span>Current Flow: 0.8 kn E</span>
               <span>Phase: Ebbing</span>
             </div>
@@ -327,24 +325,24 @@ export default function FishermanHomePage() {
         </Card>
 
         {/* Card 3: Wave Height */}
-        <Card className="bg-slate-900 border-slate-800 text-slate-100 shadow-md hover:border-slate-700 transition-colors">
+        <Card className="bg-white border-slate-200 text-slate-900 shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="pb-2 flex flex-row items-center justify-between">
-            <CardTitle className="text-sm font-semibold text-slate-300 flex items-center gap-2">
-              <Compass className="h-4 w-4 text-emerald-400" />
+            <CardTitle className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+              <Compass className="h-4 w-4 text-emerald-600" />
               Swell & Waves
             </CardTitle>
-            <Badge variant="outline" className="text-xs text-amber-400 border-amber-800">
+            <Badge variant="outline" className="text-xs text-amber-800 border-amber-200 bg-amber-50">
               {weatherState.safetyStatus}
             </Badge>
           </CardHeader>
           <CardContent className="space-y-2">
             <div className="flex items-baseline justify-between">
-              <span className="text-3xl font-extrabold text-white">{weatherState.waveHeight}</span>
-              <span className="text-xs font-medium text-slate-400">Period: {weatherState.wavePeriod}</span>
+              <span className="text-3xl font-extrabold text-slate-900">{weatherState.waveHeight}</span>
+              <span className="text-xs font-medium text-slate-500">Period: {weatherState.wavePeriod}</span>
             </div>
-            <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-300">
+            <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-600">
               <span>Direction: WSW (240°)</span>
-              <span className="text-emerald-400 font-medium">Small Boats OK</span>
+              <span className="text-emerald-700 font-medium">Small Boats OK</span>
             </div>
           </CardContent>
         </Card>
@@ -352,26 +350,26 @@ export default function FishermanHomePage() {
 
       {/* 6. Fishing Zones & Region Map Card */}
       <section>
-        <Card className="bg-slate-900 border-slate-800 text-slate-100 shadow-xl overflow-hidden">
-          <CardHeader className="flex flex-row items-center justify-between pb-3">
+        <Card className="bg-white border-slate-200 text-slate-900 shadow-sm overflow-hidden">
+          <CardHeader className="flex flex-row items-center justify-between pb-3 border-b border-slate-100">
             <div>
-              <CardTitle className="text-base font-bold text-white flex items-center gap-2">
-                <MapPin className="h-5 w-5 text-cyan-400" />
+              <CardTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
+                <MapPin className="h-5 w-5 text-cyan-600" />
                 Fishing Zones & Continuous Thermal Gradient Map
               </CardTitle>
-              <CardDescription className="text-xs text-slate-400 mt-0.5">
+              <CardDescription className="text-xs text-slate-500 mt-0.5">
                 Thermal surface overlay (Green = Safe / High Fish Potential, Red = Hazard / Avoid Zone).
               </CardDescription>
             </div>
             <Link
               href="/fisherman/geofencing-boundaries"
-              className="text-xs font-semibold text-cyan-400 hover:text-cyan-300 flex items-center gap-1 bg-cyan-950/60 border border-cyan-800 px-3 py-1.5 rounded-lg shrink-0"
+              className="text-xs font-semibold text-cyan-700 hover:text-cyan-800 flex items-center gap-1 bg-cyan-50 border border-cyan-200 px-3 py-1.5 rounded-lg shrink-0"
             >
               <span>View full map</span>
               <ExternalLink className="h-3.5 w-3.5" />
             </Link>
           </CardHeader>
-          <CardContent className="p-4 pt-0">
+          <CardContent className="p-4">
             <LeafletMap
               center={DEFAULT_LOCATION}
               zoom={10}
@@ -383,60 +381,60 @@ export default function FishermanHomePage() {
         </Card>
       </section>
 
-      {/* 7. Recent Alerts & Quick Actions (2-Column Grid on Desktop) */}
+      {/* 7. Recent Alerts & Quick Actions (White Cards) */}
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Alerts Card */}
-        <Card className="bg-slate-900 border-slate-800 text-slate-100 shadow-md">
-          <CardHeader className="flex flex-row items-center justify-between pb-3">
-            <CardTitle className="text-base font-bold text-white flex items-center gap-2">
-              <ShieldAlert className="h-5 w-5 text-amber-400" />
+        <Card className="bg-white border-slate-200 text-slate-900 shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between pb-3 border-b border-slate-100">
+            <CardTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
+              <ShieldAlert className="h-5 w-5 text-amber-600" />
               Recent Safety & Advisory Alerts
             </CardTitle>
-            <Link href="/fisherman/hazards-alerts" className="text-xs text-cyan-400 hover:underline">
+            <Link href="/fisherman/hazards-alerts" className="text-xs text-cyan-700 hover:underline font-semibold">
               See all
             </Link>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="p-4 space-y-3">
             {/* Alert 1 */}
-            <div className="p-3 bg-slate-950/70 rounded-xl border-l-4 border-red-500 flex flex-col gap-1">
+            <div className="p-3 bg-red-50/60 rounded-xl border-l-4 border-red-500 border border-red-100 flex flex-col gap-1">
               <div className="flex items-center justify-between text-xs">
-                <span className="font-bold text-red-400">High Swell Warning</span>
+                <span className="font-bold text-red-900">High Swell Warning</span>
                 <span className="text-slate-500">10 mins ago</span>
               </div>
-              <p className="text-xs text-slate-300">
+              <p className="text-xs text-slate-700">
                 Swell waves reaching 2.8m near Chellanam reef. Small craft advised to stay within 10nm.
               </p>
             </div>
 
             {/* Alert 2 */}
-            <div className="p-3 bg-slate-950/70 rounded-xl border-l-4 border-emerald-500 flex flex-col gap-1">
+            <div className="p-3 bg-emerald-50/60 rounded-xl border-l-4 border-emerald-500 border border-emerald-100 flex flex-col gap-1">
               <div className="flex items-center justify-between text-xs">
-                <span className="font-bold text-emerald-400">Potential Fishing Zone (PFZ) Updated</span>
+                <span className="font-bold text-emerald-900">Potential Fishing Zone (PFZ) Updated</span>
                 <span className="text-slate-500">1 hour ago</span>
               </div>
-              <p className="text-xs text-slate-300">
+              <p className="text-xs text-slate-700">
                 High chlorophyll cluster detected 14nm SW of Cochin Port. High Sardine & Mackerel probability.
               </p>
             </div>
 
             {/* Alert 3 */}
-            <div className="p-3 bg-slate-950/70 rounded-xl border-l-4 border-amber-500 flex flex-col gap-1">
+            <div className="p-3 bg-amber-50/60 rounded-xl border-l-4 border-amber-500 border border-amber-100 flex flex-col gap-1">
               <div className="flex items-center justify-between text-xs">
-                <span className="font-bold text-amber-400">Navigational Hazard Alert</span>
+                <span className="font-bold text-amber-900">Navigational Hazard Alert</span>
                 <span className="text-slate-500">3 hours ago</span>
               </div>
-              <p className="text-xs text-slate-300">
+              <p className="text-xs text-slate-700">
                 Submerged dredging cable reported near Fort Kochi entrance channel. Keep 200m distance.
               </p>
             </div>
 
             {/* Alert 4 */}
-            <div className="p-3 bg-slate-950/70 rounded-xl border-l-4 border-cyan-500 flex flex-col gap-1">
+            <div className="p-3 bg-sky-50/60 rounded-xl border-l-4 border-sky-500 border border-sky-100 flex flex-col gap-1">
               <div className="flex items-center justify-between text-xs">
-                <span className="font-bold text-cyan-400">Weather Forecast Update</span>
+                <span className="font-bold text-sky-900">Weather Forecast Update</span>
                 <span className="text-slate-500">5 hours ago</span>
               </div>
-              <p className="text-xs text-slate-300">
+              <p className="text-xs text-slate-700">
                 Scattered evening rain squalls anticipated between 18:00 – 21:00 IST. Visibility ~4km.
               </p>
             </div>
@@ -444,78 +442,78 @@ export default function FishermanHomePage() {
         </Card>
 
         {/* Quick Actions Card */}
-        <Card className="bg-slate-900 border-slate-800 text-slate-100 shadow-md">
-          <CardHeader>
-            <CardTitle className="text-base font-bold text-white flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-cyan-400" />
+        <Card className="bg-white border-slate-200 text-slate-900 shadow-sm">
+          <CardHeader className="border-b border-slate-100">
+            <CardTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-cyan-600" />
               Quick Actions & Modules
             </CardTitle>
-            <CardDescription className="text-xs text-slate-400">
+            <CardDescription className="text-xs text-slate-500">
               Instant access to core fisherman navigation modules.
             </CardDescription>
           </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-3.5">
+          <CardContent className="p-4 grid grid-cols-2 gap-3.5">
             <Link
               href="/fisherman/chat"
-              className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 hover:border-cyan-500/60 hover:bg-cyan-950/30 transition-all group flex flex-col items-center text-center gap-2"
+              className="p-4 rounded-xl bg-slate-50 border border-slate-200 hover:border-cyan-500 hover:bg-cyan-50/50 transition-all group flex flex-col items-center text-center gap-2"
             >
-              <div className="p-3 rounded-full bg-cyan-900/40 text-cyan-400 group-hover:scale-110 transition-transform">
+              <div className="p-3 rounded-full bg-cyan-100 text-cyan-700 group-hover:scale-110 transition-transform">
                 <Compass className="h-6 w-6" />
               </div>
-              <span className="font-semibold text-sm text-slate-200 group-hover:text-white">Ask ORCA</span>
-              <span className="text-[11px] text-slate-400">AI Safety Assistant</span>
+              <span className="font-semibold text-sm text-slate-900">Ask ORCA</span>
+              <span className="text-[11px] text-slate-500">AI Safety Assistant</span>
             </Link>
 
             <Link
               href="/fisherman/geofencing-boundaries"
-              className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 hover:border-emerald-500/60 hover:bg-emerald-950/30 transition-all group flex flex-col items-center text-center gap-2"
+              className="p-4 rounded-xl bg-slate-50 border border-slate-200 hover:border-emerald-500 hover:bg-emerald-50/50 transition-all group flex flex-col items-center text-center gap-2"
             >
-              <div className="p-3 rounded-full bg-emerald-900/40 text-emerald-400 group-hover:scale-110 transition-transform">
+              <div className="p-3 rounded-full bg-emerald-100 text-emerald-700 group-hover:scale-110 transition-transform">
                 <MapPin className="h-6 w-6" />
               </div>
-              <span className="font-semibold text-sm text-slate-200 group-hover:text-white">View Map</span>
-              <span className="text-[11px] text-slate-400">Interactive Zones</span>
+              <span className="font-semibold text-sm text-slate-900">View Map</span>
+              <span className="text-[11px] text-slate-500">Interactive Zones</span>
             </Link>
 
             <Link
               href="/fisherman/fishing-advisory"
-              className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 hover:border-amber-500/60 hover:bg-amber-950/30 transition-all group flex flex-col items-center text-center gap-2"
+              className="p-4 rounded-xl bg-slate-50 border border-slate-200 hover:border-amber-500 hover:bg-amber-50/50 transition-all group flex flex-col items-center text-center gap-2"
             >
-              <div className="p-3 rounded-full bg-amber-900/40 text-amber-400 group-hover:scale-110 transition-transform">
+              <div className="p-3 rounded-full bg-amber-100 text-amber-700 group-hover:scale-110 transition-transform">
                 <FileText className="h-6 w-6" />
               </div>
-              <span className="font-semibold text-sm text-slate-200 group-hover:text-white">Check PFZ</span>
-              <span className="text-[11px] text-slate-400">Fish Zone Potential</span>
+              <span className="font-semibold text-sm text-slate-900">Check PFZ</span>
+              <span className="text-[11px] text-slate-500">Fish Zone Potential</span>
             </Link>
 
             <Link
               href="/fisherman/hazards-alerts"
-              className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 hover:border-red-500/60 hover:bg-red-950/30 transition-all group flex flex-col items-center text-center gap-2"
+              className="p-4 rounded-xl bg-slate-50 border border-slate-200 hover:border-red-500 hover:bg-red-50/50 transition-all group flex flex-col items-center text-center gap-2"
             >
-              <div className="p-3 rounded-full bg-red-900/40 text-red-400 group-hover:scale-110 transition-transform">
+              <div className="p-3 rounded-full bg-red-100 text-red-700 group-hover:scale-110 transition-transform">
                 <AlertTriangle className="h-6 w-6" />
               </div>
-              <span className="font-semibold text-sm text-slate-200 group-hover:text-white">View Alerts</span>
-              <span className="text-[11px] text-slate-400">Hazards & Weather</span>
+              <span className="font-semibold text-sm text-slate-900">View Alerts</span>
+              <span className="text-[11px] text-slate-500">Hazards & Weather</span>
             </Link>
           </CardContent>
         </Card>
       </section>
 
-      {/* 8. Today's Trend Line Chart (OPTIONAL - build last if time permits) */}
-      <section className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-lg">
+      {/* 8. Today's Trend Line Chart (White Card) */}
+      <section className="bg-white border border-slate-200 text-slate-900 rounded-2xl p-5 shadow-sm">
         {/* OPTIONAL - build last if time permits */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between pb-4 gap-2 border-b border-slate-800 mb-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between pb-4 gap-2 border-b border-slate-100 mb-4">
           <div>
-            <h3 className="text-base font-bold text-white flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-cyan-400" />
+            <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-cyan-600" />
               Today's Ocean Trend (24h Wave & Wind Dynamics)
             </h3>
-            <p className="text-xs text-slate-400 mt-0.5">
+            <p className="text-xs text-slate-500 mt-0.5">
               Hourly wave swell (meters) and wind velocity (knots) forecast for offshore Kochi.
             </p>
           </div>
-          <Badge variant="outline" className="self-start md:self-auto text-xs text-slate-400 border-slate-700">
+          <Badge variant="outline" className="self-start md:self-auto text-xs text-slate-600 border-slate-200">
             Recharts Sample Trend
           </Badge>
         </div>
@@ -523,33 +521,34 @@ export default function FishermanHomePage() {
         <div className="h-64 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={OCEAN_TREND_DATA} margin={{ top: 10, right: 20, left: -20, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
               <XAxis dataKey="time" stroke="#64748b" fontSize={12} />
               <YAxis stroke="#64748b" fontSize={12} />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: "#0f172a",
-                  borderColor: "#334155",
+                  backgroundColor: "#ffffff",
+                  borderColor: "#cbd5e1",
                   borderRadius: "0.75rem",
-                  color: "#f8fafc",
+                  color: "#0f172a",
+                  boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)",
                 }}
               />
               <Line
                 type="monotone"
                 dataKey="waveHeight"
                 name="Wave Height (m)"
-                stroke="#06b6d4"
+                stroke="#0284c7"
                 strokeWidth={3}
-                dot={{ r: 4, fill: "#06b6d4" }}
+                dot={{ r: 4, fill: "#0284c7" }}
               />
               <Line
                 type="monotone"
                 dataKey="windSpeed"
                 name="Wind Speed (kn)"
-                stroke="#eab308"
+                stroke="#d97706"
                 strokeWidth={2}
                 strokeDasharray="4 4"
-                dot={{ r: 3, fill: "#eab308" }}
+                dot={{ r: 3, fill: "#d97706" }}
               />
             </LineChart>
           </ResponsiveContainer>

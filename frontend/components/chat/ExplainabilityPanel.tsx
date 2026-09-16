@@ -18,9 +18,9 @@ export function ExplainabilityPanel({ sources }: ExplainabilityPanelProps) {
   };
 
   return (
-    <div className="mt-3 p-3 rounded-xl bg-slate-950/70 border border-slate-800/90 text-xs">
-      <div className="flex items-center gap-1.5 text-slate-400 font-medium mb-2">
-        <ShieldCheck className="h-3.5 w-3.5 text-cyan-400" />
+    <div className="mt-3 p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs">
+      <div className="flex items-center gap-1.5 text-slate-600 font-medium mb-2">
+        <ShieldCheck className="h-3.5 w-3.5 text-cyan-700" />
         <span>How ORCA Decided: Fed by {sources.length} verified data {sources.length === 1 ? 'source' : 'sources'}</span>
       </div>
       <div className="flex flex-wrap gap-1.5">
@@ -28,9 +28,9 @@ export function ExplainabilityPanel({ sources }: ExplainabilityPanelProps) {
           <Badge
             key={idx}
             variant="secondary"
-            className="bg-cyan-950/60 border border-cyan-700/50 text-cyan-300 font-normal py-1 px-2.5 rounded-full flex items-center gap-1 text-[11px]"
+            className="bg-cyan-50 border border-cyan-200 text-cyan-800 font-normal py-1 px-2.5 rounded-full flex items-center gap-1 text-[11px]"
           >
-            <Check className="h-3 w-3 text-cyan-400 shrink-0" />
+            <Check className="h-3 w-3 text-cyan-700 shrink-0" />
             <span>{getPillLabel(src)}</span>
           </Badge>
         ))}
