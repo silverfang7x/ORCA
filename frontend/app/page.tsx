@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { motion } from "framer-motion";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -24,25 +27,46 @@ export default function LandingPage() {
         </Badge>
       </header>
 
-      {/* Hero Section */}
+      {/* Magic UI Animated Hero Section */}
       <section className="w-full max-w-4xl text-center my-auto py-8 sm:py-12 z-10">
-        <Badge variant="secondary" className="mb-4 bg-white border border-slate-200 text-slate-700 px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-medium shadow-sm max-w-full leading-normal">
-          Multi-Agent Conversational AI for Marine Safety & Coastal Intelligence
-        </Badge>
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: "easeOut" }}
+        >
+          <Badge variant="secondary" className="mb-4 bg-white border border-slate-200 text-slate-700 px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-medium shadow-sm max-w-full leading-normal">
+            Multi-Agent Conversational AI for Marine Safety & Coastal Intelligence
+          </Badge>
+        </motion.div>
 
-        <h1 className="text-3xl sm:text-5xl md:text-6xl font-extrabold text-slate-900 tracking-tight leading-tight mb-4">
+        <motion.h1
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1, ease: "easeOut" }}
+          className="text-3xl sm:text-5xl md:text-6xl font-extrabold text-slate-900 tracking-tight leading-tight mb-4"
+        >
           Navigating Safe Waters with <br className="hidden sm:inline" />
           <span className="bg-gradient-to-r from-cyan-700 via-teal-700 to-blue-800 bg-clip-text text-transparent">
             Explainable AI Advisories
           </span>
-        </h1>
+        </motion.h1>
 
-        <p className="text-slate-600 text-base sm:text-lg md:text-xl max-w-2xl mx-auto leading-relaxed mb-8 sm:mb-10 px-2">
+        <motion.p
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2, ease: "easeOut" }}
+          className="text-slate-600 text-base sm:text-lg md:text-xl max-w-2xl mx-auto leading-relaxed mb-8 sm:mb-10 px-2"
+        >
           ORCA orchestrates specialized weather, oceanographic, and geofence agents to provide real-time, cited safety advice in regional languages.
-        </p>
+        </motion.p>
 
-        {/* Surface Selection Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto text-left w-full">
+        {/* Animated Surface Selection Cards */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.3, ease: "easeOut" }}
+          className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto text-left w-full"
+        >
           {/* Card 1: Fisherman Surface */}
           <Card className="group relative overflow-hidden border-slate-200 bg-white hover:border-cyan-500 transition-all duration-300 shadow-sm hover:shadow-md flex flex-col justify-between w-full">
             <div className="absolute top-0 right-0 p-6 text-cyan-500/10 group-hover:text-cyan-500/20 transition-colors pointer-events-none">
@@ -107,7 +131,7 @@ export default function LandingPage() {
               </div>
             </CardContent>
           </Card>
-        </div>
+        </motion.div>
       </section>
 
       {/* Footer */}

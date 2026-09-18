@@ -1,3 +1,4 @@
+import { motion } from "framer-motion";
 import { ChatMessage } from "@orca/shared";
 import { Badge } from "@/components/ui/badge";
 import { Waves, User, ExternalLink, ShieldCheck } from "lucide-react";
@@ -12,7 +13,12 @@ export function MessageBubble({ message }: MessageBubbleProps) {
   const isUser = message.role === "user";
 
   return (
-    <div className={`flex w-full my-3 ${isUser ? "justify-end" : "justify-start"}`}>
+    <motion.div
+      initial={{ opacity: 0, y: 8, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ duration: 0.2, ease: "easeOut" }}
+      className={`flex w-full my-3 ${isUser ? "justify-end" : "justify-start"}`}
+    >
       <div className={`flex gap-3 max-w-[88%] sm:max-w-[78%] ${isUser ? "flex-row-reverse" : "flex-row"}`}>
         {/* Avatar */}
         <div
@@ -88,6 +94,6 @@ export function MessageBubble({ message }: MessageBubbleProps) {
           </div>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
