@@ -75,7 +75,7 @@ export function VoiceInput({ onTranscript, disabled }: VoiceInputProps) {
       size="icon"
       onClick={toggleListening}
       disabled={disabled}
-      className={`relative h-10 w-10 shrink-0 transition-all ${
+      className={`relative h-11 w-11 min-h-[44px] min-w-[44px] shrink-0 transition-all ${
         isListening
           ? "animate-pulse ring-2 ring-red-500 shadow-md shadow-red-500/30"
           : "bg-slate-100 hover:bg-slate-200 text-cyan-700 border border-slate-200"

@@ -1,0 +1,81 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "India-Sri Lanka International Maritime Boundary Buffer"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [79.25, 9.20],
+            [79.50, 9.15],
+            [79.70, 9.35],
+            [79.60, 9.55],
+            [79.35, 9.45],
+            [79.25, 9.20]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Gulf of Kutch Marine Protected Area"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [69.20, 22.40],
+            [69.80, 22.35],
+            [70.15, 22.50],
+            [70.00, 22.70],
+            [69.40, 22.65],
+            [69.20, 22.40]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Andaman Islands Marine Protected Area"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [92.50, 11.45],
+            [92.70, 11.42],
+            [92.75, 11.65],
+            [92.55, 11.68],
+            [92.48, 11.55],
+            [92.50, 11.45]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Wadge Bank Protected Marine Zone"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [76.85, 7.45],
+            [77.35, 7.40],
+            [77.45, 7.80],
+            [77.10, 7.90],
+            [76.80, 7.70],
+            [76.85, 7.45]
+          ]
+        ]
+      }
+    }
+  ]
+}

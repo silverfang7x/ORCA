@@ -154,6 +154,35 @@ function HeatmapOverlay({
   return null;
 }
 
+// Helper component to invalidate map size automatically when container resizes or mounts
+function MapResizer() {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!map) return;
+
+    // Trigger initial resize invalidate after mount
+    const timer = setTimeout(() => {
+      map.invalidateSize();
+    }, 250);
+
+    const handleResize = () => {
+      map.invalidateSize();
+    };
+
+    window.addEventListener("resize", handleResize);
+    window.addEventListener("orientationchange", handleResize);
+
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("resize", handleResize);
+      window.removeEventListener("orientationchange", handleResize);
+    };
+  }, [map]);
+
+  return null;
+}
+
 export default function LeafletMapInner({
   center,
   zoom,
@@ -173,6 +202,9 @@ export default function LeafletMapInner({
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
+
+        {/* Dynamic map auto-resizer on viewport/orientation change */}
+        <MapResizer />
 
         {/* Heatmap Continuous Gradient Overlay */}
         <HeatmapOverlay heatPoints={heatPoints} center={center} />

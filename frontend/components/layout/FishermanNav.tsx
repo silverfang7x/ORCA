@@ -94,7 +94,7 @@ export function FishermanNav() {
       </aside>
 
       {/* Mobile Bottom Tab Bar (Below 768px) */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-slate-950/95 backdrop-blur-lg border-t border-slate-900 px-2 py-1.5 shadow-2xl">
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-slate-950/95 backdrop-blur-lg border-t border-slate-900 px-2 py-1 shadow-2xl">
         <nav className="flex items-center justify-around">
           {MOBILE_NAV_ITEMS.map((item) => {
             const Icon = item.icon;
@@ -103,7 +103,7 @@ export function FishermanNav() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex flex-col items-center justify-center py-1 px-2 rounded-lg transition-all text-[10px] font-medium ${
+                className={`flex flex-col items-center justify-center py-1.5 px-3 min-h-[44px] min-w-[44px] rounded-lg transition-all text-[10px] font-medium ${
                   isActive ? "text-cyan-400 font-semibold" : "text-slate-400 hover:text-slate-200"
                 }`}
               >

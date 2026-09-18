@@ -12,39 +12,39 @@ export default function LandingPage() {
       <div className="absolute bottom-10 left-10 w-96 h-96 bg-blue-200/40 rounded-full blur-[100px] pointer-events-none" />
 
       {/* Header Badge */}
-      <header className="w-full max-w-5xl flex justify-between items-center z-10">
-        <div className="flex items-center gap-2">
+      <header className="w-full max-w-5xl flex flex-row justify-between items-center z-10 gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <div className="h-9 w-9 rounded-xl bg-cyan-700 flex items-center justify-center shadow-md text-white">
             <Waves className="h-5 w-5" />
           </div>
           <span className="font-bold text-xl tracking-tight text-slate-900">ORCA</span>
         </div>
-        <Badge variant="outline" className="border-cyan-300 text-cyan-800 bg-cyan-50 px-3 py-1 font-semibold">
+        <Badge variant="outline" className="border-cyan-300 text-cyan-800 bg-cyan-50 px-2.5 py-1 text-[11px] sm:text-xs font-semibold text-right shrink-0">
           SIH26176 • ISRO Sponsored
         </Badge>
       </header>
 
       {/* Hero Section */}
-      <section className="w-full max-w-4xl text-center my-auto py-12 z-10">
-        <Badge variant="secondary" className="mb-4 bg-white border border-slate-200 text-slate-700 px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium shadow-sm">
+      <section className="w-full max-w-4xl text-center my-auto py-8 sm:py-12 z-10">
+        <Badge variant="secondary" className="mb-4 bg-white border border-slate-200 text-slate-700 px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-medium shadow-sm max-w-full leading-normal">
           Multi-Agent Conversational AI for Marine Safety & Coastal Intelligence
         </Badge>
 
-        <h1 className="text-4xl sm:text-6xl font-extrabold text-slate-900 tracking-tight leading-tight mb-4">
+        <h1 className="text-3xl sm:text-5xl md:text-6xl font-extrabold text-slate-900 tracking-tight leading-tight mb-4">
           Navigating Safe Waters with <br className="hidden sm:inline" />
           <span className="bg-gradient-to-r from-cyan-700 via-teal-700 to-blue-800 bg-clip-text text-transparent">
             Explainable AI Advisories
           </span>
         </h1>
 
-        <p className="text-slate-600 text-lg sm:text-xl max-w-2xl mx-auto leading-relaxed mb-10">
+        <p className="text-slate-600 text-base sm:text-lg md:text-xl max-w-2xl mx-auto leading-relaxed mb-8 sm:mb-10 px-2">
           ORCA orchestrates specialized weather, oceanographic, and geofence agents to provide real-time, cited safety advice in regional languages.
         </p>
 
         {/* Surface Selection Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto text-left">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto text-left w-full">
           {/* Card 1: Fisherman Surface */}
-          <Card className="group relative overflow-hidden border-slate-200 bg-white hover:border-cyan-500 transition-all duration-300 shadow-sm hover:shadow-md flex flex-col justify-between">
+          <Card className="group relative overflow-hidden border-slate-200 bg-white hover:border-cyan-500 transition-all duration-300 shadow-sm hover:shadow-md flex flex-col justify-between w-full">
             <div className="absolute top-0 right-0 p-6 text-cyan-500/10 group-hover:text-cyan-500/20 transition-colors pointer-events-none">
               <Anchor className="h-28 w-28 -mr-6 -mt-6" />
             </div>
@@ -62,13 +62,13 @@ export default function LandingPage() {
             </CardHeader>
 
             <CardContent className="relative z-10 space-y-3 pt-2">
-              <Button asChild size="lg" className="w-full bg-cyan-700 hover:bg-cyan-600 text-white font-semibold flex items-center justify-between shadow-sm">
+              <Button asChild size="lg" className="w-full min-h-[44px] bg-cyan-700 hover:bg-cyan-600 text-white font-semibold flex items-center justify-between shadow-sm">
                 <Link href="/fisherman/chat">
                   <span>Launch Fisherman Chat</span>
                   <MessageSquareText className="h-4 w-4" />
                 </Link>
               </Button>
-              <Button asChild variant="outline" size="sm" className="w-full border-slate-200 text-slate-700 hover:bg-slate-50 text-xs">
+              <Button asChild variant="outline" size="sm" className="w-full min-h-[44px] border-slate-200 text-slate-700 hover:bg-slate-50 text-xs">
                 <Link href="/fisherman/home">
                   <span>View Fisherman Home Dashboard</span>
                   <ArrowRight className="h-3 w-3 ml-1" />
@@ -78,7 +78,7 @@ export default function LandingPage() {
           </Card>
 
           {/* Card 2: Official Surface */}
-          <Card className="group relative overflow-hidden border-slate-200 bg-white hover:border-blue-500 transition-all duration-300 shadow-sm hover:shadow-md flex flex-col justify-between">
+          <Card className="group relative overflow-hidden border-slate-200 bg-white hover:border-blue-500 transition-all duration-300 shadow-sm hover:shadow-md flex flex-col justify-between w-full">
             <div className="absolute top-0 right-0 p-6 text-blue-500/10 group-hover:text-blue-500/20 transition-colors pointer-events-none">
               <Shield className="h-28 w-28 -mr-6 -mt-6" />
             </div>
@@ -96,7 +96,7 @@ export default function LandingPage() {
             </CardHeader>
 
             <CardContent className="relative z-10 space-y-3 pt-2">
-              <Button asChild size="lg" className="w-full bg-blue-700 hover:bg-blue-600 text-white font-semibold flex items-center justify-between shadow-sm">
+              <Button asChild size="lg" className="w-full min-h-[44px] bg-blue-700 hover:bg-blue-600 text-white font-semibold flex items-center justify-between shadow-sm">
                 <Link href="/official/dashboard">
                   <span>Open Official Dashboard</span>
                   <LayoutDashboard className="h-4 w-4" />

@@ -1,0 +1,72 @@
+[
+  {
+    "id": "HAZ-IN-001",
+    "region": "Bay of Bengal / Odisha Coast",
+    "type": "Cyclone Warning",
+    "severity": "High",
+    "latitude": 20.27,
+    "longitude": 86.70,
+    "radiusKm": 120,
+    "description": "Severe cyclonic storm approaching Paradip coast. Wind speeds exceeding 90 km/h."
+  },
+  {
+    "id": "HAZ-IN-002",
+    "region": "Kerala Coast (Kochi)",
+    "type": "High Wave Alert",
+    "severity": "Medium",
+    "latitude": 9.93,
+    "longitude": 76.26,
+    "radiusKm": 45,
+    "description": "Swell waves up to 2.8m expected off Kochi-Munambam coastline."
+  },
+  {
+    "id": "HAZ-IN-003",
+    "region": "Gujarat Coast (Porbandar)",
+    "type": "Storm Warning",
+    "severity": "High",
+    "latitude": 21.64,
+    "longitude": 69.60,
+    "radiusKm": 90,
+    "description": "Squally weather and rough sea conditions off Porbandar & Kutch coast."
+  },
+  {
+    "id": "HAZ-IN-004",
+    "region": "Tamil Nadu Coast (Coromandel)",
+    "type": "Lightning Alert",
+    "severity": "Medium",
+    "latitude": 13.08,
+    "longitude": 80.27,
+    "radiusKm": 30,
+    "description": "Frequent thunder and lightning strikes reported near offshore Chennai."
+  },
+  {
+    "id": "HAZ-IN-005",
+    "region": "Andhra Pradesh Coast (Visakhapatnam)",
+    "type": "Cyclone Warning",
+    "severity": "High",
+    "latitude": 17.68,
+    "longitude": 83.21,
+    "radiusKm": 100,
+    "description": "Deep depression intensifying into a cyclone near Visakhapatnam offshore."
+  },
+  {
+    "id": "HAZ-IN-006",
+    "region": "West Bengal Sundarbans",
+    "type": "Storm Warning",
+    "severity": "High",
+    "latitude": 21.65,
+    "longitude": 88.08,
+    "radiusKm": 60,
+    "description": "Heavy rainfall and gale wind advisories around Sagar Island and Sundarbans."
+  },
+  {
+    "id": "HAZ-IN-007",
+    "region": "South Kerala & Kanyakumari",
+    "type": "High Wave Alert",
+    "severity": "Low",
+    "latitude": 8.08,
+    "longitude": 77.55,
+    "radiusKm": 35,
+    "description": "Moderate swell waves near Kanyakumari convergence zone."
+  }
+]
