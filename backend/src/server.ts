@@ -25,6 +25,21 @@ app.use(express.json());
 // In-memory data stores for hackathon state management
 const sosStore: (SOSRequest & { receivedAt: string })[] = [];
 const broadcastStore: BroadcastAlert[] = [];
+const queryHistoryStore: {
+  id: string;
+  timestamp: string;
+  timeLabel: string;
+  userQuery: string;
+  location?: LocationQuery;
+  waveHeight?: number;
+  seaSurfaceTemp?: number;
+}[] = [
+  { id: "HIS-101", timestamp: "2026-09-18T18:00:00.000Z", timeLabel: "06:00 AM", userQuery: "Is it safe to fish near Kochi tomorrow?", waveHeight: 1.2, seaSurfaceTemp: 28.1 },
+  { id: "HIS-102", timestamp: "2026-09-18T19:00:00.000Z", timeLabel: "07:00 AM", userQuery: "What is the wave height near Chennai?", waveHeight: 1.4, seaSurfaceTemp: 28.3 },
+  { id: "HIS-103", timestamp: "2026-09-18T20:00:00.000Z", timeLabel: "08:00 AM", userQuery: "High swell warnings in Sector 4?", waveHeight: 2.1, seaSurfaceTemp: 28.7 },
+  { id: "HIS-104", timestamp: "2026-09-18T21:00:00.000Z", timeLabel: "09:00 AM", userQuery: "Tide forecast for Munambam Harbour", waveHeight: 1.8, seaSurfaceTemp: 28.5 },
+  { id: "HIS-105", timestamp: "2026-09-18T22:00:00.000Z", timeLabel: "10:00 AM", userQuery: "Am I near any geofence boundary?", waveHeight: 1.5, seaSurfaceTemp: 28.2 },
+];
 
 // Health check endpoint
 app.get('/health', (req: Request, res: Response) => {
@@ -47,6 +62,17 @@ app.post('/api/query', async (req: Request, res: Response) => {
     }
 
     const resultState = await runOrcaGraph(userQuery, location);
+
+    queryHistoryStore.push({
+      id: `HIS-${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      timeLabel: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      userQuery,
+      location,
+      waveHeight: resultState.weatherData?.waveHeightMeters || 1.4,
+      seaSurfaceTemp: resultState.weatherData?.seaSurfaceTempCelsius || 28.2,
+    });
+
     return res.json(resultState);
   } catch (error: any) {
     console.error('[API /api/query Error]:', error);
@@ -127,6 +153,22 @@ app.get('/api/broadcast', (req: Request, res: Response) => {
     console.error('[API GET /api/broadcast Error]:', error);
     return res.status(500).json({
       error: 'Failed to fetch broadcast alerts',
+      message: error?.message || 'An unexpected error occurred.'
+    });
+  }
+});
+
+/**
+ * 5. GET /api/history
+ * Returns historical query volume & ocean telemetry log for dashboard trend charts.
+ */
+app.get('/api/history', (req: Request, res: Response) => {
+  try {
+    return res.json(queryHistoryStore);
+  } catch (error: any) {
+    console.error('[API GET /api/history Error]:', error);
+    return res.status(500).json({
+      error: 'Failed to fetch query history',
       message: error?.message || 'An unexpected error occurred.'
     });
   }

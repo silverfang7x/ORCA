@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { HistoricalTrendChart } from "@/components/dashboard/HistoricalTrendChart";
 import {
   AlertTriangle,
   MapPin,
@@ -349,6 +350,9 @@ export default function OfficialDashboardOverviewPage() {
           </table>
         </CardContent>
       </Card>
+
+      {/* Stretch Feature: Historical Trend Chart Component */}
+      <HistoricalTrendChart />
     </div>
   );
 }
