@@ -233,7 +233,8 @@ export default function OfficialDashboardOverviewPage() {
             </div>
             <h3 className="font-bold text-slate-900 text-sm">Historical Trend Analytics Slot</h3>
             <p className="text-xs text-slate-500 max-w-md mx-auto">
-              // OPTIONAL - build last if time permits, see CONTEXT.md. Multi-month trends and historical fleet analytics.
+              {/* OPTIONAL - build last if time permits, see CONTEXT.md */}
+              Multi-month trends and historical fleet analytics will appear here.
             </p>
           </div>
         </CardContent>
