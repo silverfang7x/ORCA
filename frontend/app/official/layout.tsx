@@ -43,8 +43,12 @@ export default function OfficialLayout({ children }: { children: React.ReactNode
       {/* ========================================================================= */}
       <aside className="hidden md:flex flex-col w-64 border-r border-slate-800 bg-slate-900 text-slate-200 shrink-0 min-h-screen p-4 space-y-6 sticky top-0 h-screen z-30">
         {/* Command Header Logo */}
-        <div className="flex items-center gap-3 px-2 py-1 border-b border-slate-800 pb-4">
-          <div className="p-2.5 rounded-xl bg-cyan-600 text-white shadow-md">
+        <Link
+          href="/"
+          className="flex items-center gap-3 px-2 py-1 border-b border-slate-800 pb-4 group hover:opacity-95 transition-all cursor-pointer"
+          title="Return to Role Selector"
+        >
+          <div className="p-2.5 rounded-xl bg-cyan-600 text-white shadow-md group-hover:bg-cyan-500 transition-colors">
             <Radio className="h-5 w-5 animate-pulse" />
           </div>
           <div>
@@ -54,7 +58,7 @@ export default function OfficialLayout({ children }: { children: React.ReactNode
             </div>
             <p className="text-[11px] text-slate-400 font-mono">Coastal Command Center</p>
           </div>
-        </div>
+        </Link>
 
         {/* Sidebar Nav Items */}
         <nav className="space-y-1 flex-1 overflow-y-auto">
@@ -105,19 +109,19 @@ export default function OfficialLayout({ children }: { children: React.ReactNode
       {/* Mobile Top Header & Drawer                                                */}
       {/* ========================================================================= */}
       <header className="md:hidden flex items-center justify-between p-4 bg-slate-900 border-b border-slate-800 sticky top-0 z-40 text-white">
-        <div className="flex items-center gap-2.5">
-          <div className="p-2 rounded-lg bg-cyan-600 text-white">
+        <Link href="/" className="flex items-center gap-2.5 group cursor-pointer" title="Return to Role Selector">
+          <div className="p-2 rounded-lg bg-cyan-600 text-white group-hover:bg-cyan-500 transition-colors">
             <Radio className="h-4 w-4" />
           </div>
           <div>
             <div className="font-bold text-white text-sm">ORCA Command</div>
             <div className="text-[10px] text-slate-400">Official Control Panel</div>
           </div>
-        </div>
+        </Link>
 
         <Sheet open={mobileDrawerOpen} onOpenChange={setMobileDrawerOpen}>
           <SheetTrigger asChild>
-            <Button variant="outline" size="icon" className="bg-slate-950 border-slate-800 text-slate-300">
+            <Button variant="outline" size="icon" className="bg-slate-950 border-slate-800 text-slate-300 min-h-[44px] min-w-[44px] shrink-0">
               <Menu className="h-5 w-5" />
             </Button>
           </SheetTrigger>
@@ -137,7 +141,7 @@ export default function OfficialLayout({ children }: { children: React.ReactNode
                     key={item.id}
                     href={item.href}
                     onClick={() => setMobileDrawerOpen(false)}
-                    className={`w-full flex items-center justify-between px-3.5 py-3 rounded-xl text-xs font-semibold transition-all ${
+                    className={`w-full flex items-center justify-between px-3.5 py-3 min-h-[44px] rounded-xl text-xs font-semibold transition-all ${
                       isActive
                         ? "bg-cyan-600 text-white"
                         : "text-slate-400 hover:text-slate-200 hover:bg-slate-800"
