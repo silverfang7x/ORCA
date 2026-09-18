@@ -9,7 +9,17 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 4000;
 
-app.use(cors());
+const allowedOriginsEnv = process.env.CORS_ORIGIN || process.env.FRONTEND_URL;
+const corsOptions: cors.CorsOptions = {
+  origin: allowedOriginsEnv
+    ? allowedOriginsEnv.includes(',')
+      ? allowedOriginsEnv.split(',').map((o) => o.trim())
+      : allowedOriginsEnv.trim()
+    : '*',
+  credentials: true,
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 
 // In-memory data stores for hackathon state management
