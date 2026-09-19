@@ -117,6 +117,8 @@ export async function runOrcaGraph(
     });
   };
 
+  const overallStart = Date.now();
+
   // 1. Multilingual Detection & Translation
   const t0 = Date.now();
   emit('multilingual', 'Multilingual Layer', 'started', 'Detecting query language and analyzing script range...');
@@ -223,6 +225,9 @@ export async function runOrcaGraph(
     currentState.finalAnswer = translatedAnswer;
     emit('multilingual', 'Multilingual Layer', 'completed', 'Translated response back to user language.', tr1 - tr0);
   }
+
+  const totalMs = Date.now() - overallStart;
+  console.error(`[PERF TIMING] Total End-to-End Pipeline Duration: ${totalMs}ms`);
 
   return currentState;
 }

@@ -1,4 +1,9 @@
 {
+  "functions": {
+    "backend/api/**/*": {
+      "maxDuration": 30
+    }
+  },
   "services": {
     "frontend": {
       "root": "frontend",

@@ -136,6 +136,8 @@ export async function hazardGeofenceAgent(state: AgentState): Promise<Partial<Ag
     date: new Date().toISOString(),
   };
 
+  const hazardStart = Date.now();
   const hazardData = await getHazardGeofenceData(queryLocation);
+  console.error(`[PERF TIMING] Hazard Geofence evaluation: ${Date.now() - hazardStart}ms`);
   return { hazardData };
 }

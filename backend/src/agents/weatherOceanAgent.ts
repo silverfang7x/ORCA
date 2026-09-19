@@ -32,7 +32,7 @@ const FALLBACK_WEATHER_DATA: WeatherOceanData = {
 /**
  * Executes a fetch request with a configurable AbortController timeout.
  */
-async function fetchWithTimeout(url: string, timeoutMs = 10000): Promise<Response> {
+async function fetchWithTimeout(url: string, timeoutMs = 5000): Promise<Response> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -157,11 +157,13 @@ export async function getWeatherOceanData(query: LocationQuery): Promise<Weather
     const marineUrl = `https://marine-api.open-meteo.com/v1/marine?latitude=${query.latitude}&longitude=${query.longitude}&hourly=wave_height,sea_surface_temperature,sea_level_height_msl&start_date=${startDateStr}&end_date=${endDateStr}`;
     const forecastUrl = `https://api.open-meteo.com/v1/forecast?latitude=${query.latitude}&longitude=${query.longitude}&hourly=wind_speed_10m&wind_speed_unit=kmh&start_date=${targetDateStr}&end_date=${targetDateStr}`;
 
+    const tWeatherStart = Date.now();
     // Execute requests concurrently with 10-second timeout handling
     const [marineResResult, forecastResResult] = await Promise.allSettled([
-      fetchWithTimeout(marineUrl, 10000),
-      fetchWithTimeout(forecastUrl, 10000),
+      fetchWithTimeout(marineUrl, 5000),
+      fetchWithTimeout(forecastUrl, 5000),
     ]);
+    console.log(`[PERF TIMING] Weather Agent Open-Meteo API Calls: ${Date.now() - tWeatherStart}ms`);
 
     let marineData: OpenMeteoMarineResponse | null = null;
     let forecastData: OpenMeteoForecastResponse | null = null;

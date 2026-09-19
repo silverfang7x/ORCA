@@ -136,6 +136,9 @@ async function callBhashiniTwoStep(
     };
 
     let response: Response;
+    const configStart = Date.now();
+    const configController = new AbortController();
+    const configTimer = setTimeout(() => configController.abort(), 5000);
     try {
       response = await fetch(pipelineUrl, {
         method: 'POST',
@@ -144,16 +147,22 @@ async function callBhashiniTwoStep(
           'authorization': apiKey,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
+        signal: configController.signal
       });
-      console.error(`[Bhashini Step 1 Response] HTTP Status: ${response.status}`);
+      console.error(`[PERF TIMING] Bhashini getModelsPipeline config call: ${Date.now() - configStart}ms (HTTP Status: ${response.status})`);
     } catch (fetchErr: any) {
-      console.error(`[Bhashini Step 1 Fetch Exception]: ${fetchErr?.message || fetchErr}`);
+      console.error(`[PERF TIMING ERROR] Bhashini getModelsPipeline exception after ${Date.now() - configStart}ms: ${fetchErr?.message || fetchErr}`);
       throw fetchErr;
+    } finally {
+      clearTimeout(configTimer);
     }
 
     if (!response.ok) {
       console.error(`[Bhashini Step 1 Retry] Retrying getModelsPipeline with ulcaApiKey header...`);
+      const retryStart = Date.now();
+      const retryController = new AbortController();
+      const retryTimer = setTimeout(() => retryController.abort(), 5000);
       try {
         response = await fetch(pipelineUrl, {
           method: 'POST',
@@ -162,12 +171,15 @@ async function callBhashiniTwoStep(
             'ulcaApiKey': apiKey,
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify(payload)
+          body: JSON.stringify(payload),
+          signal: retryController.signal
         });
-        console.error(`[Bhashini Step 1 Retry Response] HTTP Status: ${response.status}`);
+        console.error(`[PERF TIMING] Bhashini getModelsPipeline retry call: ${Date.now() - retryStart}ms (HTTP Status: ${response.status})`);
       } catch (retryErr: any) {
-        console.error(`[Bhashini Step 1 Retry Exception]: ${retryErr?.message || retryErr}`);
+        console.error(`[PERF TIMING ERROR] Bhashini getModelsPipeline retry exception after ${Date.now() - retryStart}ms: ${retryErr?.message || retryErr}`);
         throw retryErr;
+      } finally {
+        clearTimeout(retryTimer);
       }
     }
 
@@ -199,6 +211,9 @@ async function callBhashiniTwoStep(
   // Step 2: Compute Inference call
   console.error(`[Bhashini Step 2] Executing inference POST call to ${config.callbackUrl} for serviceId ${config.serviceId}...`);
   let computeRes: Response;
+  const computeStart = Date.now();
+  const computeController = new AbortController();
+  const computeTimer = setTimeout(() => computeController.abort(), 5000);
   try {
     computeRes = await fetch(config.callbackUrl, {
       method: 'POST',
@@ -222,12 +237,15 @@ async function callBhashiniTwoStep(
         inputData: {
           input: [{ source: text }]
         }
-      })
+      }),
+      signal: computeController.signal
     });
-    console.error(`[Bhashini Step 2 Response] HTTP Status: ${computeRes.status}`);
+    console.error(`[PERF TIMING] Bhashini translate inference call: ${Date.now() - computeStart}ms (HTTP Status: ${computeRes.status})`);
   } catch (compErr: any) {
-    console.error(`[Bhashini Step 2 Fetch Exception]: ${compErr?.message || compErr}`);
+    console.error(`[PERF TIMING ERROR] Bhashini translate inference exception after ${Date.now() - computeStart}ms: ${compErr?.message || compErr}`);
     throw compErr;
+  } finally {
+    clearTimeout(computeTimer);
   }
 
   if (!computeRes.ok) {

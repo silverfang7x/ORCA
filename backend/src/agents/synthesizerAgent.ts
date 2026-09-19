@@ -74,21 +74,29 @@ Data Context:
 ${JSON.stringify(promptData, null, 2)}`;
 
     let responseContent = '';
+    const synthStart = Date.now();
 
     for (const modelName of GROQ_MODELS) {
       try {
-        const response = await groq.chat.completions.create({
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userMessage }
-          ],
-          model: modelName,
-          temperature: 0.2
-        });
+        const response = await groq.chat.completions.create(
+          {
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: userMessage }
+            ],
+            model: modelName,
+            temperature: 0.2
+          },
+          { timeout: 5000 }
+        );
 
         responseContent = response.choices[0]?.message?.content?.trim() || '';
-        if (responseContent) break;
+        if (responseContent) {
+          console.error(`[PERF TIMING] Synthesizer Groq call (${modelName}): ${Date.now() - synthStart}ms`);
+          break;
+        }
       } catch (err) {
+        console.error(`[PERF TIMING ERROR] Synthesizer Groq model ${modelName} failed after ${Date.now() - synthStart}ms`);
         continue;
       }
     }

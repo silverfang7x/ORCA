@@ -5,7 +5,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const DEFAULT_INTENT = { needsWeather: true, needsHazard: true };
-const GROQ_MODELS = ['llama-3.3-70b-versatile', 'openai/gpt-oss-120b', 'groq/compound'];
+const GROQ_MODELS = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'];
 
 /**
  * Planner Agent: Analyzes the user's query using Groq LLM
@@ -39,25 +39,33 @@ Classification Rules:
 - Set BOTH to true if query asks about overall fishing safety or general advice (e.g. "is it safe to fish near Kochi tomorrow?").`;
 
     let content = '';
+    const tStart = Date.now();
     for (const modelName of GROQ_MODELS) {
       try {
-        const response = await groq.chat.completions.create({
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: query }
-          ],
-          model: modelName,
-          temperature: 0.1,
-          response_format: { type: 'json_object' }
-        });
+        const response = await groq.chat.completions.create(
+          {
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: query }
+            ],
+            model: modelName,
+            temperature: 0.1,
+            response_format: { type: 'json_object' }
+          },
+          { timeout: 5000 }
+        );
         content = response.choices[0]?.message?.content || '';
-        if (content) break;
+        if (content) {
+          console.log(`[PERF TIMING] Planner Agent Groq Call (${modelName}): ${Date.now() - tStart}ms`);
+          break;
+        }
       } catch (err) {
         continue;
       }
     }
 
     if (!content) {
+      console.log(`[PERF TIMING] Planner Agent Groq Call failed/exhausted: ${Date.now() - tStart}ms`);
       return { intent: DEFAULT_INTENT };
     }
 
