@@ -1,25 +1,25 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Skeleton } from "@/components/ui/skeleton";
+import { useState } from "react";
 import { HistoricalTrendChart } from "@/components/dashboard/HistoricalTrendChart";
 import {
   AlertTriangle,
   MapPin,
   Navigation,
-  TrendingUp,
   Radio,
   Activity,
   Compass,
-  ShieldAlert,
-  Clock,
+  ShieldCheck,
   Server,
   Wifi,
   Users,
   Terminal,
   Layers,
-  ArrowUpRight,
-  ShieldCheck,
+  Cpu,
+  Database,
+  Sliders,
+  CheckCircle2,
+  FileCheck,
   Zap,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -62,20 +62,20 @@ export default function OfficialDashboardOverviewPage() {
   ]);
 
   return (
-    <div className="space-y-5 pb-8">
+    <div className="space-y-6 pb-8">
       {/* 1. Command Center Operations Header Bar */}
       <section className="bg-slate-900 border border-slate-800 rounded-2xl p-4 md:p-5 text-white shadow-md">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-800">
           <div>
             <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-cyan-950 border border-cyan-800 text-cyan-400 text-[11px] font-mono font-semibold mb-2">
               <Activity className="h-3 w-3 text-cyan-400 animate-pulse" />
-              ISRO / INCOIS Coastal Operations Center (V2.4 Console)
+              ISRO / INCOIS Coastal Operations Center (V2.4 High-Density Operator Console)
             </div>
             <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-white">
-              Official Command Overview
+              Official Command & Technical Telemetry Console
             </h1>
             <p className="text-xs md:text-sm text-slate-400 mt-0.5">
-              Live multi-agent marine monitoring, regional hazard broadcast controls, and vessel security analytics.
+              Live multi-agent agent confidence scoring, raw spectral sensor readouts, full citation provenance, and multi-sector comparison matrix.
             </p>
           </div>
 
@@ -129,7 +129,106 @@ export default function OfficialDashboardOverviewPage() {
         </div>
       </section>
 
-      {/* 2. Operational Metrics Grid (Dense Data Tiles) */}
+      {/* 2. OPERATOR HIGH-DENSITY TECHNICAL AUDIT PANEL (AI Agent Confidence & Raw Sensor Readings) */}
+      <section className="bg-slate-950 border border-slate-800 rounded-2xl p-5 text-slate-100 shadow-md space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-800 gap-2">
+          <div>
+            <h2 className="text-base font-bold text-white flex items-center gap-2 font-mono">
+              <Cpu className="h-4 w-4 text-cyan-400" />
+              Agent Confidence Scoring & Raw Sensor Spectral Matrix
+            </h2>
+            <CardDescription className="text-xs text-slate-400 mt-0.5 font-mono">
+              Detailed technical readouts tailored for trained operators (confidence bounds, sensor payload hashes, and citation lineage).
+            </CardDescription>
+          </div>
+          <Badge variant="outline" className="bg-cyan-950 text-cyan-300 border-cyan-800 text-[10px] font-mono self-start sm:self-auto">
+            OPERATOR DENSITY: HIGH
+          </Badge>
+        </div>
+
+        {/* Confidence Scores Per Agent Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 font-mono text-xs">
+          <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 space-y-1">
+            <div className="text-[10px] text-slate-400 flex items-center justify-between">
+              <span>PLANNER AGENT</span>
+              <Badge variant="outline" className="text-[9px] bg-blue-950 text-blue-300 border-blue-800">INTENT FIDELITY</Badge>
+            </div>
+            <div className="text-xl font-extrabold text-blue-400">98.6% Confidence</div>
+            <div className="text-[10px] text-slate-400 pt-1 border-t border-slate-800/80">
+              Model: Groq / LLaMA-3.3-70B • Latency: 1015ms
+            </div>
+          </div>
+
+          <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 space-y-1">
+            <div className="text-[10px] text-slate-400 flex items-center justify-between">
+              <span>WEATHER & OCEAN AGENT</span>
+              <Badge variant="outline" className="text-[9px] bg-cyan-950 text-cyan-300 border-cyan-800">SNR 42dB</Badge>
+            </div>
+            <div className="text-xl font-extrabold text-cyan-400">99.1% Confidence</div>
+            <div className="text-[10px] text-slate-400 pt-1 border-t border-slate-800/80">
+              Source: Open-Meteo REST • Sat Sampling: 100%
+            </div>
+          </div>
+
+          <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 space-y-1">
+            <div className="text-[10px] text-slate-400 flex items-center justify-between">
+              <span>HAZARD & GEOFENCE AGENT</span>
+              <Badge variant="outline" className="text-[9px] bg-amber-950 text-amber-300 border-amber-800">TURF.JS SPATIAL</Badge>
+            </div>
+            <div className="text-xl font-extrabold text-emerald-400">100.0% Verified</div>
+            <div className="text-[10px] text-slate-400 pt-1 border-t border-slate-800/80">
+              Polygon Intersect Check: 0 Violations (2D EPSG:4326)
+            </div>
+          </div>
+
+          <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 space-y-1">
+            <div className="text-[10px] text-slate-400 flex items-center justify-between">
+              <span>SYNTHESIZER AGENT</span>
+              <Badge variant="outline" className="text-[9px] bg-purple-950 text-purple-300 border-purple-800">PROVENANCE</Badge>
+            </div>
+            <div className="text-xl font-extrabold text-purple-400">99.5% Integrity</div>
+            <div className="text-[10px] text-slate-400 pt-1 border-t border-slate-800/80">
+              Citation Verification: 2 Data Provenance Hashes
+            </div>
+          </div>
+        </div>
+
+        {/* Raw Sensor Readouts & Citation Provenance Box */}
+        <div className="p-4 rounded-xl bg-slate-900/90 border border-slate-800 text-xs font-mono space-y-3">
+          <div className="flex items-center justify-between text-slate-300 font-bold border-b border-slate-800 pb-2">
+            <span className="flex items-center gap-2">
+              <Database className="h-4 w-4 text-cyan-400" />
+              Raw Spectral Telemetry & Sensor-Level Readouts (Buoy CB-02 / Sector Alpha)
+            </span>
+            <span className="text-[10px] text-slate-500">Payload Hash: sha256:7f8a91c...</span>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-[11px] text-slate-300">
+            <div>
+              <span className="text-slate-400 block text-[10px]">Peak Wave Period (Tp)</span>
+              <strong className="text-white text-sm">14.2 s</strong>
+              <span className="text-[10px] text-slate-500 block">Swell Spectrum: Deep Water</span>
+            </div>
+            <div>
+              <span className="text-slate-400 block text-[10px]">Spectral Energy Density S(f)</span>
+              <strong className="text-white text-sm">2.85 m²/Hz</strong>
+              <span className="text-[10px] text-slate-500 block">Peak Frequency: 0.07 Hz</span>
+            </div>
+            <div>
+              <span className="text-slate-400 block text-[10px]">SST Anomaly (ΔT)</span>
+              <strong className="text-amber-400 text-sm">+1.8 °C</strong>
+              <span className="text-[10px] text-amber-500/80 block">Warm Water Blob Active</span>
+            </div>
+            <div>
+              <span className="text-slate-400 block text-[10px]">Doppler Current Drift (Vc)</span>
+              <strong className="text-white text-sm">1.4 kn @ 215° SW</strong>
+              <span className="text-[10px] text-slate-500 block">Ebb Tide Current Active</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 3. Operational Metrics Grid (Dense Data Tiles) */}
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="bg-white border-slate-200 text-slate-900 shadow-sm">
           <CardHeader className="p-3.5 pb-1 flex flex-row items-center justify-between space-y-0">
@@ -184,7 +283,100 @@ export default function OfficialDashboardOverviewPage() {
         </Card>
       </section>
 
-      {/* 3. Main Split Surface: Tactical Map (65%) + Live Telemetry Audit Stream (35%) */}
+      {/* 4. MULTI-REGION SECTOR TECHNICAL COMPARISON MATRIX TABLE */}
+      <Card className="bg-white border-slate-200 text-slate-900 shadow-sm overflow-hidden">
+        <CardHeader className="border-b border-slate-100 p-4 pb-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <Sliders className="h-4 w-4 text-cyan-700" />
+                Multi-Region Technical Telemetry & AI Risk Level Comparison Matrix
+              </CardTitle>
+              <CardDescription className="text-xs text-slate-500">
+                Comparative operator-level readout matching underlying multi-agent telemetry across active coastal sectors
+              </CardDescription>
+            </div>
+            <Badge variant="outline" className="text-xs bg-slate-50 border-slate-200 font-mono text-slate-700">
+              4 Sectors Compared
+            </Badge>
+          </div>
+        </CardHeader>
+
+        <CardContent className="p-0 overflow-x-auto">
+          <table className="w-full text-left text-xs font-mono">
+            <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] border-b border-slate-200">
+              <tr>
+                <th className="p-3 pl-4">Sector Name</th>
+                <th className="p-3">Wave Height (Hs)</th>
+                <th className="p-3">SST (°C)</th>
+                <th className="p-3">Wind Vector</th>
+                <th className="p-3">Geofence Status</th>
+                <th className="p-3">Agent Confidence</th>
+                <th className="p-3 pr-4 text-right">Operator AI Risk Level</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 font-sans">
+              <tr className="hover:bg-slate-50/80">
+                <td className="p-3 pl-4 font-bold text-slate-900 font-mono">Sector Alpha (Kochi-Munambam)</td>
+                <td className="p-3 font-mono text-slate-800">1.4 m (Tp 14.2s)</td>
+                <td className="p-3 font-mono text-slate-800">28.2 °C (ΔT +1.8)</td>
+                <td className="p-3 font-mono text-slate-800">15.0 km/h @ 215°</td>
+                <td className="p-3">
+                  <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 text-[10px] font-mono">CLEAR (12.4nm to IMBL)</Badge>
+                </td>
+                <td className="p-3 font-mono text-slate-800 font-bold">99.1%</td>
+                <td className="p-3 pr-4 text-right font-mono">
+                  <span className="text-amber-600 font-bold">LEVEL 2 (MODERATE SWELL)</span>
+                </td>
+              </tr>
+
+              <tr className="hover:bg-slate-50/80">
+                <td className="p-3 pl-4 font-bold text-slate-900 font-mono">Sector Bravo (Vizhinjam Deep Sea)</td>
+                <td className="p-3 font-mono text-slate-800">1.1 m (Tp 10.5s)</td>
+                <td className="p-3 font-mono text-slate-800">27.9 °C (Normal)</td>
+                <td className="p-3 font-mono text-slate-800">12.0 km/h @ 180°</td>
+                <td className="p-3">
+                  <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 text-[10px] font-mono">CLEAR (18.1nm to IMBL)</Badge>
+                </td>
+                <td className="p-3 font-mono text-slate-800 font-bold">99.8%</td>
+                <td className="p-3 pr-4 text-right font-mono">
+                  <span className="text-emerald-700 font-bold">LEVEL 1 (NORMAL SAFE)</span>
+                </td>
+              </tr>
+
+              <tr className="hover:bg-slate-50/80">
+                <td className="p-3 pl-4 font-bold text-slate-900 font-mono">Sector Charlie (Comorin Basin)</td>
+                <td className="p-3 font-mono text-slate-800">3.6 m (Tp 18.0s)</td>
+                <td className="p-3 font-mono text-slate-800">29.4 °C (High)</td>
+                <td className="p-3 font-mono text-slate-800">38.5 km/h @ 090°</td>
+                <td className="p-3">
+                  <Badge className="bg-red-100 text-red-800 border-red-200 text-[10px] font-mono">ALERT (High Surge Zone)</Badge>
+                </td>
+                <td className="p-3 font-mono text-slate-800 font-bold">98.2%</td>
+                <td className="p-3 pr-4 text-right font-mono">
+                  <span className="text-red-700 font-bold">LEVEL 3 (EMERGENCY SURGE)</span>
+                </td>
+              </tr>
+
+              <tr className="hover:bg-slate-50/80">
+                <td className="p-3 pl-4 font-bold text-slate-900 font-mono">Sector Delta (Lakshadweep Channel)</td>
+                <td className="p-3 font-mono text-slate-800">1.8 m (Tp 12.1s)</td>
+                <td className="p-3 font-mono text-slate-800">28.5 °C (Normal)</td>
+                <td className="p-3 font-mono text-slate-800">18.2 km/h @ 270°</td>
+                <td className="p-3">
+                  <Badge className="bg-amber-100 text-amber-800 border-amber-200 text-[10px] font-mono">BUFFER (4.5nm Boundary)</Badge>
+                </td>
+                <td className="p-3 font-mono text-slate-800 font-bold">99.4%</td>
+                <td className="p-3 pr-4 text-right font-mono">
+                  <span className="text-amber-600 font-bold">LEVEL 2 (MONITOR HEADING)</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </CardContent>
+      </Card>
+
+      {/* 5. Main Split Surface: Tactical Map (65%) + Live Telemetry Audit Stream (35%) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* Tactical Map Container */}
         <section className="lg:col-span-2 bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex flex-col justify-between">
@@ -262,94 +454,6 @@ export default function OfficialDashboardOverviewPage() {
           </CardContent>
         </Card>
       </div>
-
-      {/* 4. Sector Fleet Readiness & Response Matrix Table */}
-      <Card className="bg-white border-slate-200 text-slate-900 shadow-sm overflow-hidden">
-        <CardHeader className="border-b border-slate-100 p-4 pb-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                <ShieldCheck className="h-4 w-4 text-cyan-700" />
-                Sector Fleet Readiness & Response Matrix
-              </CardTitle>
-              <CardDescription className="text-xs text-slate-500">
-                Operational status across all active coastal guard patrol command sectors
-              </CardDescription>
-            </div>
-            <Badge variant="outline" className="text-xs bg-slate-50 border-slate-200 font-mono text-slate-700">
-              4 Sectors Active
-            </Badge>
-          </div>
-        </CardHeader>
-
-        <CardContent className="p-0 overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50 text-slate-500 font-mono uppercase text-[10px] border-b border-slate-200">
-              <tr>
-                <th className="p-3 pl-4">Sector Name</th>
-                <th className="p-3">Primary HQ</th>
-                <th className="p-3">Active Craft</th>
-                <th className="p-3">Sea Condition</th>
-                <th className="p-3">Patrol Craft Assigned</th>
-                <th className="p-3 pr-4 text-right">Response Readiness</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 font-sans">
-              <tr className="hover:bg-slate-50/80">
-                <td className="p-3 pl-4 font-bold text-slate-900">Sector Alpha (Kochi-Munambam)</td>
-                <td className="p-3 text-slate-600 font-mono text-[11px]">Kochi Station HQ</td>
-                <td className="p-3 font-mono text-slate-800 font-bold">54 Craft</td>
-                <td className="p-3">
-                  <Badge className="bg-amber-100 text-amber-800 border-amber-200 text-[10px]">Moderate Swell (2.1m)</Badge>
-                </td>
-                <td className="p-3 text-slate-700 font-mono">ICGS Varaha (CG-402)</td>
-                <td className="p-3 pr-4 text-right">
-                  <span className="text-emerald-700 font-bold font-mono">LEVEL 1 (DEFCON 4)</span>
-                </td>
-              </tr>
-
-              <tr className="hover:bg-slate-50/80">
-                <td className="p-3 pl-4 font-bold text-slate-900">Sector Bravo (Vizhinjam Deep Sea)</td>
-                <td className="p-3 text-slate-600 font-mono text-[11px]">Vizhinjam Port HQ</td>
-                <td className="p-3 font-mono text-slate-800 font-bold">38 Craft</td>
-                <td className="p-3">
-                  <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 text-[10px]">Calm (1.1m)</Badge>
-                </td>
-                <td className="p-3 text-slate-700 font-mono">ICGS Rajdoot (CG-108)</td>
-                <td className="p-3 pr-4 text-right">
-                  <span className="text-emerald-700 font-bold font-mono">LEVEL 1 (NORMAL)</span>
-                </td>
-              </tr>
-
-              <tr className="hover:bg-slate-50/80">
-                <td className="p-3 pl-4 font-bold text-slate-900">Sector Charlie (Comorin Basin)</td>
-                <td className="p-3 text-slate-600 font-mono text-[11px]">Kanyakumari Command</td>
-                <td className="p-3 font-mono text-slate-800 font-bold">22 Craft</td>
-                <td className="p-3">
-                  <Badge className="bg-red-100 text-red-800 border-red-200 text-[10px]">Severe Surge (3.6m)</Badge>
-                </td>
-                <td className="p-3 text-slate-700 font-mono">ICGS Samar (CG-301)</td>
-                <td className="p-3 pr-4 text-right">
-                  <span className="text-red-700 font-bold font-mono">LEVEL 3 (EMERGENCY)</span>
-                </td>
-              </tr>
-
-              <tr className="hover:bg-slate-50/80">
-                <td className="p-3 pl-4 font-bold text-slate-900">Sector Delta (Lakshadweep Channel)</td>
-                <td className="p-3 text-slate-600 font-mono text-[11px]">Kavaratti Outpost</td>
-                <td className="p-3 font-mono text-slate-800 font-bold">14 Craft</td>
-                <td className="p-3">
-                  <Badge className="bg-amber-100 text-amber-800 border-amber-200 text-[10px]">Moderate Current</Badge>
-                </td>
-                <td className="p-3 text-slate-700 font-mono">ICGS C-441 Fast Patrol</td>
-                <td className="p-3 pr-4 text-right">
-                  <span className="text-emerald-700 font-bold font-mono">LEVEL 1 (NORMAL)</span>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </CardContent>
-      </Card>
 
       {/* Stretch Feature: Historical Trend Chart Component */}
       <HistoricalTrendChart />
