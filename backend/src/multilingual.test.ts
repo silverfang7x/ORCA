@@ -4,6 +4,16 @@ import { runOrcaGraph } from './graph';
 async function testMultilingualPipeline() {
   console.log('=== ORCA Multilingual Detection & Translation Test Suite ===\n');
 
+  // Explicit test requested: English -> Hindi -> English
+  const originalEnglish = 'Is it safe to fish tomorrow?';
+  console.log(`[Test 1] Original English Phrase: "${originalEnglish}"`);
+  
+  const translatedHindi = await translateFromEnglish(originalEnglish, 'hi');
+  console.log(`[Test 1] Translated to Hindi (via Bhashini): "${translatedHindi}"`);
+  
+  const backToEnglish = await translateToEnglish(translatedHindi, 'hi');
+  console.log(`[Test 1] Translated back to English (via Bhashini): "${backToEnglish}"\n`);
+
   const hindiQuery = 'क्या कल कोच्चि के पास मछली पकड़ना सुरक्षित है?';
   const location = {
     latitude: 9.9312,
@@ -11,7 +21,7 @@ async function testMultilingualPipeline() {
     date: '2026-09-16'
   };
 
-  console.log(`Original Hindi Query: "${hindiQuery}"`);
+  console.log(`[Test 2] Original Hindi Query: "${hindiQuery}"`);
 
   // Step 1: Test Language Detection
   const detectedLang = await detectLanguage(hindiQuery);

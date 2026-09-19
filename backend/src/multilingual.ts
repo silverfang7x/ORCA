@@ -5,6 +5,16 @@ dotenv.config();
 
 const GROQ_MODELS = ['llama-3.3-70b-versatile', 'openai/gpt-oss-120b', 'groq/compound'];
 
+interface PipelineConfigCacheItem {
+  callbackUrl: string;
+  headerName: string;
+  headerValue: string;
+  serviceId: string;
+}
+
+// In-memory cache for Bhashini pipeline configurations indexed by "sourceLang-targetLang"
+const pipelineConfigCache = new Map<string, PipelineConfigCacheItem>();
+
 /**
  * Detects the language of an input string.
  * Uses script/Unicode inspection for Indian languages with fallback to default 'en'.
@@ -34,22 +44,18 @@ export async function detectLanguage(text: string): Promise<string> {
 
 /**
  * Translates text to English from sourceLang.
- * Uses Bhashini API if configured, with free web endpoint & LLM fallbacks.
+ * Uses two-step Bhashini ULCA/Dhruva API with in-memory caching and fallback engine.
  */
 export async function translateToEnglish(text: string, sourceLang: string): Promise<string> {
   if (!text || !text.trim()) return '';
   const lang = (sourceLang || 'en').toLowerCase();
   if (lang === 'en' || lang.startsWith('en-')) return text;
 
-  // Try Bhashini if API key configured
-  const apiKey = process.env.BHASHINI_API_KEY;
-  if (apiKey && apiKey.trim() !== '' && apiKey !== 'your_bhashini_api_key_here') {
-    try {
-      const bhashiniResult = await callBhashiniApi(text, lang, 'en', apiKey);
-      if (bhashiniResult) return bhashiniResult;
-    } catch (err) {
-      console.warn('[Multilingual] Bhashini API failed, falling back to free translation engine:', err);
-    }
+  try {
+    const bhashiniResult = await callBhashiniTwoStep(text, lang, 'en');
+    if (bhashiniResult) return bhashiniResult;
+  } catch (err) {
+    console.warn('[Multilingual] Bhashini API flow failed, using fallback engine:', err);
   }
 
   return await translateWithFallback(text, lang, 'en');
@@ -57,44 +63,47 @@ export async function translateToEnglish(text: string, sourceLang: string): Prom
 
 /**
  * Translates text from English to targetLang.
- * Uses Bhashini API if configured, with free web endpoint & LLM fallbacks.
+ * Uses two-step Bhashini ULCA/Dhruva API with in-memory caching and fallback engine.
  */
 export async function translateFromEnglish(text: string, targetLang: string): Promise<string> {
   if (!text || !text.trim()) return '';
   const lang = (targetLang || 'en').toLowerCase();
   if (lang === 'en' || lang.startsWith('en-')) return text;
 
-  // Try Bhashini if API key configured
-  const apiKey = process.env.BHASHINI_API_KEY;
-  if (apiKey && apiKey.trim() !== '' && apiKey !== 'your_bhashini_api_key_here') {
-    try {
-      const bhashiniResult = await callBhashiniApi(text, 'en', lang, apiKey);
-      if (bhashiniResult) return bhashiniResult;
-    } catch (err) {
-      console.warn('[Multilingual] Bhashini API failed, falling back to free translation engine:', err);
-    }
+  try {
+    const bhashiniResult = await callBhashiniTwoStep(text, 'en', lang);
+    if (bhashiniResult) return bhashiniResult;
+  } catch (err) {
+    console.warn('[Multilingual] Bhashini API flow failed, using fallback engine:', err);
   }
 
   return await translateWithFallback(text, 'en', lang);
 }
 
 /**
- * Helper to call Bhashini API
+ * Two-Step Bhashini ULCA / Dhruva translation flow:
+ * 1. Step 1 (getModelsPipeline): Request pipeline config, extract callbackUrl, inferenceApiKey, serviceId (cached in memory).
+ * 2. Step 2 (Inference Compute): POST to callbackUrl with inference key as auth header.
  */
-async function callBhashiniApi(
+async function callBhashiniTwoStep(
   text: string,
   sourceLang: string,
-  targetLang: string,
-  apiKey: string
+  targetLang: string
 ): Promise<string | null> {
-  const url = 'https://dhruva-api.bhashini.gov.in/services/inference/translation';
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': apiKey
-    },
-    body: JSON.stringify({
+  const userId = process.env.BHASHINI_USER_ID;
+  const apiKey = process.env.BHASHINI_ULCA_API_KEY;
+
+  if (!userId || !apiKey || userId.includes('your_') || apiKey.includes('your_')) {
+    throw new Error('Bhashini credentials (BHASHINI_USER_ID, BHASHINI_ULCA_API_KEY) not configured');
+  }
+
+  const cacheKey = `${sourceLang}-${targetLang}`;
+  let config = pipelineConfigCache.get(cacheKey);
+
+  if (!config) {
+    // Step 1: Get pipeline config
+    const pipelineUrl = 'https://meity-auth.ulcacontrib.org/ulca/apis/v0/model/getModelsPipeline';
+    const payload = {
       pipelineTasks: [
         {
           taskType: 'translation',
@@ -106,34 +115,118 @@ async function callBhashiniApi(
           }
         }
       ],
+      pipelineRequestConfig: {
+        pipelineId: '64392f96daac500b55c543cd'
+      }
+    };
+
+    let response = await fetch(pipelineUrl, {
+      method: 'POST',
+      headers: {
+        'userID': userId,
+        'authorization': apiKey,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      // Fallback header strategy if gateway prefers authorization header only
+      response = await fetch(pipelineUrl, {
+        method: 'POST',
+        headers: {
+          'userID': userId,
+          'ulcaApiKey': apiKey,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+    }
+
+    if (!response.ok) {
+      throw new Error(`Bhashini getModelsPipeline failed with HTTP ${response.status}`);
+    }
+
+    const data: any = await response.json();
+    const extractedEndpoint = data?.pipelineInferenceAPIEndPoint;
+    const extractedConfig = data?.pipelineResponseConfig?.[0]?.config?.[0];
+
+    config = {
+      callbackUrl: extractedEndpoint?.callbackUrl || 'https://dhruva-api.bhashini.gov.in/services/inference/pipeline',
+      headerName: extractedEndpoint?.inferenceApiKey?.name || 'Authorization',
+      headerValue: extractedEndpoint?.inferenceApiKey?.value || apiKey,
+      serviceId: extractedConfig?.serviceId || 'ai4bharat/indictrans-v2-all-gpu--t4'
+    };
+
+    pipelineConfigCache.set(cacheKey, config);
+  }
+
+  // Step 2: Compute Inference call
+  const computeRes = await fetch(config.callbackUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      [config.headerName]: config.headerValue
+    },
+    body: JSON.stringify({
+      pipelineTasks: [
+        {
+          taskType: 'translation',
+          config: {
+            language: {
+              sourceLanguage: sourceLang,
+              targetLanguage: targetLang
+            },
+            serviceId: config.serviceId
+          }
+        }
+      ],
       inputData: {
         input: [{ source: text }]
       }
     })
   });
 
-  if (!response.ok) {
-    throw new Error(`Bhashini API error HTTP status ${response.status}`);
+  if (!computeRes.ok) {
+    throw new Error(`Bhashini inference failed with HTTP status ${computeRes.status}`);
   }
 
-  const data: any = await response.json();
-  const outputText = data?.pipelineResponse?.[0]?.output?.[0]?.target;
+  const computeData: any = await computeRes.json();
+  const outputText = computeData?.pipelineResponse?.[0]?.output?.[0]?.target;
   return outputText || null;
 }
 
 /**
  * Fallback translation engine:
- * Uses Groq LLM if GROQ_API_KEY is available (handles long text seamlessly),
- * or MyMemory / Google Translate free web endpoints for shorter phrases.
+ * Uses Google Translate's free unofficial endpoint as primary fallback,
+ * with secondary Groq LLM / MyMemory endpoints.
  */
 async function translateWithFallback(
   text: string,
   sourceLang: string,
   targetLang: string
 ): Promise<string> {
-  const apiKey = process.env.GROQ_API_KEY;
+  // Primary fallback: Google Translate web endpoint
+  try {
+    const gUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${encodeURIComponent(sourceLang)}&tl=${encodeURIComponent(targetLang)}&dt=t&q=${encodeURIComponent(text)}`;
+    const gResponse = await fetch(gUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
+      }
+    });
+    if (gResponse.ok) {
+      const gData: any = await gResponse.json();
+      if (Array.isArray(gData?.[0])) {
+        const result = gData[0].map((item: any) => item[0]).join('');
+        if (result && result.trim()) return result;
+      }
+    }
+  } catch (err) {
+    console.warn('[Multilingual] Google Translate web fallback error:', err);
+  }
 
-  // Primary fallback: Groq LLM translation (ideal for long responses and markdown preservation)
+  // Secondary fallback: Groq LLM translation
+  const apiKey = process.env.GROQ_API_KEY;
   if (apiKey && apiKey.trim() !== '' && !apiKey.includes('your_groq_api_key')) {
     try {
       const groq = new Groq({ apiKey });
@@ -159,11 +252,11 @@ Output ONLY the translated text without any preamble or commentary.`;
         }
       }
     } catch (err) {
-      console.warn('[Multilingual] LLM translation fallback encountered error:', err);
+      console.warn('[Multilingual] LLM translation fallback error:', err);
     }
   }
 
-  // Secondary fallback: MyMemory API (for shorter texts)
+  // Tertiary fallback: MyMemory API
   if (text.length <= 400) {
     try {
       const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${sourceLang}|${targetLang}`;
@@ -176,26 +269,8 @@ Output ONLY the translated text without any preamble or commentary.`;
         }
       }
     } catch {
-      // Ignore and proceed to Google Translate
+      // Ignore
     }
-  }
-
-  // Tertiary fallback: Google Translate web endpoint
-  try {
-    const gUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sourceLang}&tl=${targetLang}&dt=t&q=${encodeURIComponent(text)}`;
-    const gResponse = await fetch(gUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
-      }
-    });
-    if (gResponse.ok) {
-      const gData: any = await gResponse.json();
-      if (Array.isArray(gData?.[0])) {
-        return gData[0].map((item: any) => item[0]).join('');
-      }
-    }
-  } catch (err) {
-    console.error('[Multilingual] Web fallback translation error:', err);
   }
 
   return text; // Gracefully return original text if all translation channels fail
