@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const GROQ_MODELS = ['llama-3.3-70b-versatile', 'openai/gpt-oss-120b', 'groq/compound'];
+const GROQ_MODELS = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'];
 
 interface PipelineConfigCacheItem {
   callbackUrl: string;
@@ -51,13 +51,19 @@ export async function translateToEnglish(text: string, sourceLang: string): Prom
   const lang = (sourceLang || 'en').toLowerCase();
   if (lang === 'en' || lang.startsWith('en-')) return text;
 
+  console.log(`[Multilingual] translateToEnglish requested: "${text.slice(0, 40)}..." (sourceLang: ${lang})`);
+
   try {
     const bhashiniResult = await callBhashiniTwoStep(text, lang, 'en');
-    if (bhashiniResult) return bhashiniResult;
-  } catch (err) {
-    console.warn('[Multilingual] Bhashini API flow failed, using fallback engine:', err);
+    if (bhashiniResult) {
+      console.log(`[Multilingual] Bhashini translation to English success: "${bhashiniResult.slice(0, 40)}..."`);
+      return bhashiniResult;
+    }
+  } catch (err: any) {
+    console.error('[Multilingual ERROR] Bhashini translateToEnglish flow failed:', err?.message || err);
   }
 
+  console.log('[Multilingual] Invoking fallback engine for translateToEnglish...');
   return await translateWithFallback(text, lang, 'en');
 }
 
@@ -70,13 +76,19 @@ export async function translateFromEnglish(text: string, targetLang: string): Pr
   const lang = (targetLang || 'en').toLowerCase();
   if (lang === 'en' || lang.startsWith('en-')) return text;
 
+  console.log(`[Multilingual] translateFromEnglish requested: "${text.slice(0, 40)}..." (targetLang: ${lang})`);
+
   try {
     const bhashiniResult = await callBhashiniTwoStep(text, 'en', lang);
-    if (bhashiniResult) return bhashiniResult;
-  } catch (err) {
-    console.warn('[Multilingual] Bhashini API flow failed, using fallback engine:', err);
+    if (bhashiniResult) {
+      console.log(`[Multilingual] Bhashini translation from English success: "${bhashiniResult.slice(0, 40)}..."`);
+      return bhashiniResult;
+    }
+  } catch (err: any) {
+    console.error('[Multilingual ERROR] Bhashini translateFromEnglish flow failed:', err?.message || err);
   }
 
+  console.log('[Multilingual] Invoking fallback engine for translateFromEnglish...');
   return await translateWithFallback(text, 'en', lang);
 }
 
@@ -93,15 +105,18 @@ async function callBhashiniTwoStep(
   const userId = process.env.BHASHINI_USER_ID;
   const apiKey = process.env.BHASHINI_ULCA_API_KEY;
 
+  console.error(`[Bhashini Step 0] Checking Credentials: BHASHINI_USER_ID=${userId ? 'PRESENT (' + userId.slice(0, 8) + '...)' : 'MISSING'}, BHASHINI_ULCA_API_KEY=${apiKey ? 'PRESENT' : 'MISSING'}`);
+
   if (!userId || !apiKey || userId.includes('your_') || apiKey.includes('your_')) {
-    throw new Error('Bhashini credentials (BHASHINI_USER_ID, BHASHINI_ULCA_API_KEY) not configured');
+    console.error('[Bhashini Step 0 ERROR] Environment variables BHASHINI_USER_ID or BHASHINI_ULCA_API_KEY are missing or set to placeholder!');
+    throw new Error('Bhashini credentials (BHASHINI_USER_ID, BHASHINI_ULCA_API_KEY) not configured in environment');
   }
 
   const cacheKey = `${sourceLang}-${targetLang}`;
   let config = pipelineConfigCache.get(cacheKey);
 
   if (!config) {
-    // Step 1: Get pipeline config
+    console.error(`[Bhashini Step 1] Fetching pipeline config for pair ${cacheKey}...`);
     const pipelineUrl = 'https://meity-auth.ulcacontrib.org/ulca/apis/v0/model/getModelsPipeline';
     const payload = {
       pipelineTasks: [
@@ -120,34 +135,51 @@ async function callBhashiniTwoStep(
       }
     };
 
-    let response = await fetch(pipelineUrl, {
-      method: 'POST',
-      headers: {
-        'userID': userId,
-        'authorization': apiKey,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(payload)
-    });
-
-    if (!response.ok) {
-      // Fallback header strategy if gateway prefers authorization header only
+    let response: Response;
+    try {
       response = await fetch(pipelineUrl, {
         method: 'POST',
         headers: {
           'userID': userId,
-          'ulcaApiKey': apiKey,
+          'authorization': apiKey,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(payload)
       });
+      console.error(`[Bhashini Step 1 Response] HTTP Status: ${response.status}`);
+    } catch (fetchErr: any) {
+      console.error(`[Bhashini Step 1 Fetch Exception]: ${fetchErr?.message || fetchErr}`);
+      throw fetchErr;
     }
 
     if (!response.ok) {
-      throw new Error(`Bhashini getModelsPipeline failed with HTTP ${response.status}`);
+      console.error(`[Bhashini Step 1 Retry] Retrying getModelsPipeline with ulcaApiKey header...`);
+      try {
+        response = await fetch(pipelineUrl, {
+          method: 'POST',
+          headers: {
+            'userID': userId,
+            'ulcaApiKey': apiKey,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        });
+        console.error(`[Bhashini Step 1 Retry Response] HTTP Status: ${response.status}`);
+      } catch (retryErr: any) {
+        console.error(`[Bhashini Step 1 Retry Exception]: ${retryErr?.message || retryErr}`);
+        throw retryErr;
+      }
+    }
+
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error(`[Bhashini Step 1 ERROR] getModelsPipeline failed with HTTP ${response.status}: ${errText}`);
+      throw new Error(`Bhashini getModelsPipeline failed with HTTP ${response.status}: ${errText}`);
     }
 
     const data: any = await response.json();
+    console.error(`[Bhashini Step 1 Success] Config response parsed. Keys:`, Object.keys(data));
+
     const extractedEndpoint = data?.pipelineInferenceAPIEndPoint;
     const extractedConfig = data?.pipelineResponseConfig?.[0]?.config?.[0];
 
@@ -158,42 +190,61 @@ async function callBhashiniTwoStep(
       serviceId: extractedConfig?.serviceId || 'ai4bharat/indictrans-v2-all-gpu--t4'
     };
 
+    console.error(`[Bhashini Step 1 Extracted Key & Service]: callbackUrl=${config.callbackUrl}, headerName=${config.headerName}, serviceId=${config.serviceId}`);
     pipelineConfigCache.set(cacheKey, config);
+  } else {
+    console.error(`[Bhashini Step 1] Using cached pipeline config for ${cacheKey}`);
   }
 
   // Step 2: Compute Inference call
-  const computeRes = await fetch(config.callbackUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      [config.headerName]: config.headerValue
-    },
-    body: JSON.stringify({
-      pipelineTasks: [
-        {
-          taskType: 'translation',
-          config: {
-            language: {
-              sourceLanguage: sourceLang,
-              targetLanguage: targetLang
-            },
-            serviceId: config.serviceId
+  console.error(`[Bhashini Step 2] Executing inference POST call to ${config.callbackUrl} for serviceId ${config.serviceId}...`);
+  let computeRes: Response;
+  try {
+    computeRes = await fetch(config.callbackUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        [config.headerName]: config.headerValue
+      },
+      body: JSON.stringify({
+        pipelineTasks: [
+          {
+            taskType: 'translation',
+            config: {
+              language: {
+                sourceLanguage: sourceLang,
+                targetLanguage: targetLang
+              },
+              serviceId: config.serviceId
+            }
           }
+        ],
+        inputData: {
+          input: [{ source: text }]
         }
-      ],
-      inputData: {
-        input: [{ source: text }]
-      }
-    })
-  });
+      })
+    });
+    console.error(`[Bhashini Step 2 Response] HTTP Status: ${computeRes.status}`);
+  } catch (compErr: any) {
+    console.error(`[Bhashini Step 2 Fetch Exception]: ${compErr?.message || compErr}`);
+    throw compErr;
+  }
 
   if (!computeRes.ok) {
-    throw new Error(`Bhashini inference failed with HTTP status ${computeRes.status}`);
+    const compErrText = await computeRes.text();
+    console.error(`[Bhashini Step 2 ERROR] Inference compute failed with HTTP ${computeRes.status}: ${compErrText}`);
+    throw new Error(`Bhashini inference failed with HTTP status ${computeRes.status}: ${compErrText}`);
   }
 
   const computeData: any = await computeRes.json();
   const outputText = computeData?.pipelineResponse?.[0]?.output?.[0]?.target;
-  return outputText || null;
+  if (!outputText) {
+    console.error('[Bhashini Step 2 ERROR] Response JSON did not contain output target:', JSON.stringify(computeData));
+    throw new Error('Bhashini inference response missing output target text');
+  }
+
+  console.error(`[Bhashini Step 2 Success] Received output target: "${outputText.slice(0, 40)}..."`);
+  return outputText;
 }
 
 /**
@@ -206,6 +257,8 @@ async function translateWithFallback(
   sourceLang: string,
   targetLang: string
 ): Promise<string> {
+  console.error(`[Multilingual Fallback] Triggering Google Translate fallback for "${text.slice(0, 30)}..." (${sourceLang} -> ${targetLang})`);
+
   // Primary fallback: Google Translate web endpoint
   try {
     const gUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${encodeURIComponent(sourceLang)}&tl=${encodeURIComponent(targetLang)}&dt=t&q=${encodeURIComponent(text)}`;
@@ -218,11 +271,16 @@ async function translateWithFallback(
       const gData: any = await gResponse.json();
       if (Array.isArray(gData?.[0])) {
         const result = gData[0].map((item: any) => item[0]).join('');
-        if (result && result.trim()) return result;
+        if (result && result.trim()) {
+          console.error(`[Multilingual Fallback Success] Google Translate returned: "${result.slice(0, 40)}..."`);
+          return result;
+        }
       }
+    } else {
+      console.error(`[Multilingual Fallback] Google Translate returned HTTP status ${gResponse.status}`);
     }
-  } catch (err) {
-    console.warn('[Multilingual] Google Translate web fallback error:', err);
+  } catch (err: any) {
+    console.error('[Multilingual Fallback ERROR] Google Translate web endpoint exception:', err?.message || err);
   }
 
   // Secondary fallback: Groq LLM translation
@@ -246,13 +304,16 @@ Output ONLY the translated text without any preamble or commentary.`;
             temperature: 0.1
           });
           const translated = res.choices[0]?.message?.content?.trim();
-          if (translated) return translated;
+          if (translated) {
+            console.error(`[Multilingual Fallback Success] Groq LLM (${modelName}) returned translation`);
+            return translated;
+          }
         } catch {
           continue;
         }
       }
-    } catch (err) {
-      console.warn('[Multilingual] LLM translation fallback error:', err);
+    } catch (err: any) {
+      console.error('[Multilingual Fallback ERROR] LLM translation fallback exception:', err?.message || err);
     }
   }
 
@@ -265,6 +326,7 @@ Output ONLY the translated text without any preamble or commentary.`;
         const data: any = await response.json();
         const translatedText = data?.responseData?.translatedText;
         if (translatedText && !translatedText.includes('QUERY LENGTH LIMIT EXCEEDED')) {
+          console.error(`[Multilingual Fallback Success] MyMemory API returned translation`);
           return translatedText;
         }
       }
@@ -273,5 +335,6 @@ Output ONLY the translated text without any preamble or commentary.`;
     }
   }
 
-  return text; // Gracefully return original text if all translation channels fail
+  console.error('[Multilingual Fallback Warning] All translation fallbacks exhausted, returning original text');
+  return text;
 }

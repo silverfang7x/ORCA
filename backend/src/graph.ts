@@ -6,6 +6,17 @@ import { hazardGeofenceAgent } from './agents/hazardGeofenceAgent';
 import { synthesizerAgent } from './agents/synthesizerAgent';
 import { detectLanguage, translateToEnglish, translateFromEnglish } from './multilingual';
 
+export interface AgentProgressEvent {
+  agent: 'planner' | 'weather' | 'hazard' | 'synthesizer' | 'multilingual';
+  agentName: string;
+  status: 'started' | 'completed' | 'failed';
+  description: string;
+  durationMs?: number;
+  timestamp: string;
+}
+
+export type ProgressCallback = (event: AgentProgressEvent) => void;
+
 export const OrcaStateAnnotation = Annotation.Root({
   userQuery: Annotation<string>({
     reducer: (x, y) => y ?? x ?? '',
@@ -82,16 +93,51 @@ const builder = new StateGraph(OrcaStateAnnotation)
 export const orcaGraph = builder.compile();
 
 /**
- * Executes the full ORCA multi-agent LangGraph workflow with multilingual detection and translation.
+ * Executes the full ORCA multi-agent workflow with optional real-time progress callbacks.
  */
 export async function runOrcaGraph(
   userQuery: string,
-  location?: LocationQuery
+  location?: LocationQuery,
+  onProgress?: ProgressCallback
 ): Promise<AgentState> {
+  const emit = (
+    agent: AgentProgressEvent['agent'],
+    agentName: string,
+    status: AgentProgressEvent['status'],
+    description: string,
+    durationMs?: number
+  ) => {
+    onProgress?.({
+      agent,
+      agentName,
+      status,
+      description,
+      durationMs,
+      timestamp: new Date().toISOString()
+    });
+  };
+
+  // 1. Multilingual Detection & Translation
+  const t0 = Date.now();
+  emit('multilingual', 'Multilingual Layer', 'started', 'Detecting query language and analyzing script range...');
   const detectedLang = await detectLanguage(userQuery);
   const translatedQuery = detectedLang === 'en' 
     ? userQuery 
     : await translateToEnglish(userQuery, detectedLang);
+  const t1 = Date.now();
+  emit(
+    'multilingual',
+    'Multilingual Layer',
+    'completed',
+    `Detected language "${detectedLang.toUpperCase()}". ${detectedLang !== 'en' ? 'Query translated to English.' : 'Query is in English.'}`,
+    t1 - t0
+  );
+
+  // 2. Planner Agent
+  const t2 = Date.now();
+  const latStr = location?.latitude ? location.latitude.toFixed(2) : '9.93';
+  const lngStr = location?.longitude ? location.longitude.toFixed(2) : '76.26';
+  emit('planner', 'Planner Agent', 'started', `Analyzing query intent for coastal position (${latStr}°N, ${lngStr}°E)...`);
 
   const initialState: Partial<typeof OrcaStateAnnotation.State> = {
     userQuery,
@@ -103,12 +149,80 @@ export async function runOrcaGraph(
     finalAnswer: ''
   };
 
-  const finalState = (await orcaGraph.invoke(initialState)) as AgentState;
+  const plannerResult = await plannerAgent(initialState as AgentState);
+  const t3 = Date.now();
+  const weatherReq = plannerResult.intent?.needsWeather ?? true;
+  const hazardReq = plannerResult.intent?.needsHazard ?? true;
+  emit(
+    'planner',
+    'Planner Agent',
+    'completed',
+    `Classified intent: Weather & Ocean Agent = ${weatherReq ? 'REQUIRED' : 'SKIPPED'}, Hazard & Geofence Agent = ${hazardReq ? 'REQUIRED' : 'SKIPPED'}.`,
+    t3 - t2
+  );
 
-  if (detectedLang !== 'en' && finalState.finalAnswer) {
-    const translatedAnswer = await translateFromEnglish(finalState.finalAnswer, detectedLang);
-    finalState.finalAnswer = translatedAnswer;
+  let currentState: AgentState = {
+    ...initialState,
+    ...plannerResult
+  } as AgentState;
+
+  // 3. Sub-Agents Execution (Weather & Hazard)
+  const subAgentPromises: Promise<any>[] = [];
+
+  if (weatherReq) {
+    subAgentPromises.push((async () => {
+      const tw0 = Date.now();
+      emit('weather', 'Weather & Ocean Agent', 'started', 'Fetching real-time marine wave, wind, and sea surface temperature telemetry...');
+      const weatherRes = (await weatherOceanAgent(currentState)) as any;
+      const tw1 = Date.now();
+      const weatherData = weatherRes.weatherData || weatherRes;
+      const wave = weatherData?.waveHeightMeters;
+      const waveDesc = wave ? `Wave height ${wave}m, Sea temp ${weatherData.seaSurfaceTempCelsius}°C.` : 'Marine data fetched.';
+      emit('weather', 'Weather & Ocean Agent', 'completed', `Fetched ocean telemetry from Open-Meteo: ${waveDesc}`, tw1 - tw0);
+      return weatherRes.weatherData ? weatherRes : { weatherData: weatherRes };
+    })());
   }
 
-  return finalState;
+  if (hazardReq) {
+    subAgentPromises.push((async () => {
+      const th0 = Date.now();
+      emit('hazard', 'Hazard & Geofence Agent', 'started', 'Executing Turf.js point-in-polygon spatial evaluation against active hazard polygons and boundaries...');
+      const hazardRes = (await hazardGeofenceAgent(currentState)) as any;
+      const th1 = Date.now();
+      const hazardData = hazardRes.hazardData || hazardRes;
+      const isRestricted = hazardData?.isInRestrictedZone;
+      const hazDesc = isRestricted
+        ? 'ALERT: Position intersects active restricted maritime hazard zone!'
+        : 'Spatial check complete: Position is clear of restricted maritime zones.';
+      emit('hazard', 'Hazard & Geofence Agent', 'completed', hazDesc, th1 - th0);
+      return hazardRes.hazardData ? hazardRes : { hazardData: hazardRes };
+    })());
+  }
+
+  const subAgentResults = await Promise.all(subAgentPromises);
+  for (const res of subAgentResults) {
+    currentState = { ...currentState, ...res };
+  }
+
+  // 4. Synthesizer Agent
+  const ts0 = Date.now();
+  emit('synthesizer', 'Synthesizer Agent', 'started', 'Synthesizing ocean telemetry and hazard spatial data into explainable advisory...');
+  const synthRes = await synthesizerAgent(currentState);
+  const ts1 = Date.now();
+  const sourceCount = synthRes.sources?.length || 0;
+  emit('synthesizer', 'Synthesizer Agent', 'completed', `Synthesized safe advisory with ${sourceCount} cited data sources.`, ts1 - ts0);
+
+  currentState = { ...currentState, ...synthRes };
+
+  // 5. Final Answer Regional Translation if required
+  if (detectedLang !== 'en' && currentState.finalAnswer) {
+    const tr0 = Date.now();
+    emit('multilingual', 'Multilingual Layer', 'started', `Translating final safety advisory back to regional language (${detectedLang.toUpperCase()})...`);
+    const translatedAnswer = await translateFromEnglish(currentState.finalAnswer, detectedLang);
+    const tr1 = Date.now();
+    currentState.finalAnswer = translatedAnswer;
+    emit('multilingual', 'Multilingual Layer', 'completed', 'Translated response back to user language.', tr1 - tr0);
+  }
+
+  return currentState;
 }

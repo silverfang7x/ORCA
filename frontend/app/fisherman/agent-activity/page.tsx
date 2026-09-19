@@ -5,123 +5,129 @@ import {
   Activity,
   Play,
   CheckCircle2,
-  Clock,
   Compass,
   Waves,
   ShieldCheck,
   Sparkles,
-  ArrowRight,
   Cpu,
-  Radio,
   FileText,
+  AlertCircle,
+  Globe,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { AgentThinkingTrace, AgentProgressStep } from "@/components/chat/AgentThinkingTrace";
+import { LocationQuery, AgentState } from "@orca/shared";
 
-interface StepLog {
-  id: string;
-  agent: string;
-  message: string;
-  durationMs: number;
-  status: "complete" | "running";
-}
+const DEFAULT_KOCHI_LOCATION: LocationQuery = {
+  latitude: 9.9312,
+  longitude: 76.2673,
+  date: new Date().toISOString(),
+};
 
 export default function AgentActivityPage() {
   const [selectedQuery, setSelectedQuery] = useState(
     "Is it safe to fish near Kochi tomorrow?"
   );
   const [isRunning, setIsRunning] = useState(false);
-  const [activeStep, setActiveStep] = useState<number>(4); // Default to completed step for initial render
+  const [activeStep, setActiveStep] = useState<number>(4);
+  const [steps, setSteps] = useState<AgentProgressStep[]>([]);
+  const [finalResult, setFinalResult] = useState<AgentState | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const [stepLogs, setStepLogs] = useState<StepLog[]>([
-    {
-      id: "1",
-      agent: "Planner Agent",
-      message: "Analyzed query intent: Kochi coastal coordinates (9.93°N, 76.26°E) for tomorrow.",
-      durationMs: 110,
-      status: "complete",
-    },
-    {
-      id: "2",
-      agent: "Weather & Ocean Agent",
-      message: "Fetched Open-Meteo Marine API: Wave height 1.4m, Sea Temp 28°C, Midday Tides derived.",
-      durationMs: 230,
-      status: "complete",
-    },
-    {
-      id: "3",
-      agent: "Hazard & Geofence Agent",
-      message: "Ran Turf.js spatial analysis: Checked 5 active hazard polygons & IMBL buffer. Zero violations.",
-      durationMs: 185,
-      status: "complete",
-    },
-    {
-      id: "4",
-      agent: "Synthesizer Agent",
-      message: "Combined ocean & hazard data into a clear safety advisory with 100% citation confidence.",
-      durationMs: 310,
-      status: "complete",
-    },
-  ]);
-
-  const handleRunSimulation = async () => {
+  const handleRunStream = async () => {
     setIsRunning(true);
     setActiveStep(0);
-    setStepLogs([]);
+    setSteps([]);
+    setFinalResult(null);
+    setErrorMsg(null);
 
-    // Step 1: Planner
-    await new Promise((r) => setTimeout(r, 400));
-    setActiveStep(1);
-    setStepLogs((prev) => [
-      ...prev,
-      {
-        id: "1",
-        agent: "Planner Agent",
-        message: `Parsed location query: "${selectedQuery}". Routing requests to Weather & Hazard sub-agents.`,
-        durationMs: 120,
-        status: "complete",
-      },
-    ]);
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
-    // Step 2 & 3: Weather & Hazard (Parallel)
-    await new Promise((r) => setTimeout(r, 600));
-    setActiveStep(2);
-    setStepLogs((prev) => [
-      ...prev,
-      {
-        id: "2",
-        agent: "Weather & Ocean Agent",
-        message: "Open-Meteo Marine API call returned wave height 1.4m, wind 15 km/h, sea surface temp 28°C.",
-        durationMs: 245,
-        status: "complete",
-      },
-      {
-        id: "3",
-        agent: "Hazard & Geofence Agent",
-        message: "Turf.js point-in-polygon check: Target position is 12.4nm inside safe Indian territorial waters.",
-        durationMs: 190,
-        status: "complete",
-      },
-    ]);
+    try {
+      const response = await fetch(`${apiUrl}/api/query/stream`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userQuery: selectedQuery,
+          location: DEFAULT_KOCHI_LOCATION,
+        }),
+      });
 
-    // Step 4: Synthesizer
-    await new Promise((r) => setTimeout(r, 500));
-    setActiveStep(3);
-    setStepLogs((prev) => [
-      ...prev,
-      {
-        id: "4",
-        agent: "Synthesizer Agent",
-        message: "Synthesized final natural language advisory with cited sources in regional language.",
-        durationMs: 295,
-        status: "complete",
-      },
-    ]);
+      if (!response.ok || !response.body) {
+        throw new Error(`HTTP error ${response.status} connecting to streaming endpoint`);
+      }
 
-    await new Promise((r) => setTimeout(r, 300));
-    setActiveStep(4);
-    setIsRunning(false);
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const blocks = buffer.split("\n\n");
+        buffer = blocks.pop() || "";
+
+        for (const block of blocks) {
+          if (!block.trim()) continue;
+
+          const eventMatch = block.match(/^event:\s*(.+)$/m);
+          const dataMatch = block.match(/^data:\s*(.+)$/m);
+
+          const eventName = eventMatch ? eventMatch[1].trim() : "progress";
+          const dataStr = dataMatch ? dataMatch[1].trim() : "";
+
+          if (!dataStr) continue;
+
+          if (eventName === "progress") {
+            const rawEvent = JSON.parse(dataStr);
+
+            // Update graph node highlight
+            if (rawEvent.agent === "multilingual") setActiveStep(0);
+            else if (rawEvent.agent === "planner") setActiveStep(1);
+            else if (rawEvent.agent === "weather" || rawEvent.agent === "hazard") setActiveStep(2);
+            else if (rawEvent.agent === "synthesizer") setActiveStep(3);
+
+            const newStep: AgentProgressStep = {
+              id: `${rawEvent.agent}-${rawEvent.status}-${Date.now()}`,
+              agent: rawEvent.agent,
+              agentName: rawEvent.agentName,
+              status: rawEvent.status === "completed" ? "complete" : rawEvent.status === "started" ? "running" : "failed",
+              description: rawEvent.description,
+              durationMs: rawEvent.durationMs,
+              timestamp: rawEvent.timestamp,
+            };
+
+            setSteps((prev) => {
+              // Replace running step for same agent if completing, or add new step
+              const existingIdx = prev.findIndex((s) => s.agent === rawEvent.agent && s.status === "running");
+              if (existingIdx !== -1 && newStep.status === "complete") {
+                const copy = [...prev];
+                copy[existingIdx] = newStep;
+                return copy;
+              }
+              return [...prev, newStep];
+            });
+          } else if (eventName === "complete") {
+            const stateData = JSON.parse(dataStr);
+            setFinalResult(stateData);
+            setActiveStep(4);
+          } else if (eventName === "error") {
+            const errData = JSON.parse(dataStr);
+            setErrorMsg(errData.error || "Execution error encountered");
+          }
+        }
+      }
+    } catch (err: any) {
+      console.error("[AgentActivity] Streaming execution failed:", err);
+      setErrorMsg(err?.message || "Failed to connect to agent stream endpoint");
+    } finally {
+      setIsRunning(false);
+    }
   };
 
   return (
@@ -131,13 +137,13 @@ export default function AgentActivityPage() {
         <div className="relative z-10">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur border border-white/20 text-cyan-200 text-xs font-semibold mb-3">
             <Cpu className="h-3.5 w-3.5 text-cyan-300" />
-            See How ORCA Thinks
+            Live SSE Agent Trace
           </div>
           <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">
             Live AI Agent Activity
           </h1>
           <p className="text-slate-200 text-sm md:text-base mt-1 max-w-2xl">
-            Watch how ORCA’s specialized AI agents work together in real-time to check weather, analyze hazard zones, and give you safe fishing advisories.
+            Watch ORCA’s multi-agent pipeline execute in real time. Progress events stream directly from the LangGraph server with actual step durations.
           </p>
         </div>
       </section>
@@ -147,10 +153,10 @@ export default function AgentActivityPage() {
         <CardHeader className="pb-3 border-b border-slate-100">
           <CardTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-cyan-700" />
-            Try a Live Query Flow Simulation
+            Run a Live Agent Execution Stream
           </CardTitle>
           <CardDescription className="text-xs text-slate-500">
-            Pick a question below and watch how ORCA’s multi-agent pipeline processes it step-by-step
+            Select a question below and click "Watch AI Think" to trigger the live `/api/query/stream` SSE workflow
           </CardDescription>
         </CardHeader>
         <CardContent className="p-4 space-y-4">
@@ -163,6 +169,7 @@ export default function AgentActivityPage() {
               <button
                 key={q}
                 onClick={() => setSelectedQuery(q)}
+                disabled={isRunning}
                 className={`p-3 rounded-xl text-xs font-medium text-left border transition-all ${
                   selectedQuery === q
                     ? "bg-cyan-50 border-cyan-400 text-cyan-900 font-semibold shadow-sm"
@@ -174,24 +181,24 @@ export default function AgentActivityPage() {
             ))}
           </div>
 
-          <div className="flex items-center justify-between pt-2">
-            <div className="text-xs text-slate-500 font-mono">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
+            <div className="text-xs text-slate-500 font-mono truncate max-w-md">
               Selected Query: <strong className="text-slate-900">"{selectedQuery}"</strong>
             </div>
 
             <Button
-              onClick={handleRunSimulation}
+              onClick={handleRunStream}
               disabled={isRunning}
-              className="bg-cyan-700 hover:bg-cyan-600 text-white font-semibold text-xs shadow-sm flex items-center gap-2 h-9 px-4"
+              className="bg-cyan-700 hover:bg-cyan-600 text-white font-semibold text-xs shadow-sm flex items-center gap-2 h-9 px-4 shrink-0"
             >
               <Play className={`h-3.5 w-3.5 ${isRunning ? "animate-spin" : ""}`} />
-              {isRunning ? "Running Agent Flow..." : "Watch AI Think"}
+              {isRunning ? "Streaming Agent Flow..." : "Watch AI Think"}
             </Button>
           </div>
         </CardContent>
       </Card>
 
-      {/* Horizontal Multi-Agent Node Flow Diagram */}
+      {/* Multi-Agent Execution Graph Node Highlights */}
       <Card className="bg-white border-slate-200 text-slate-900 shadow-sm overflow-hidden">
         <CardHeader className="pb-3 border-b border-slate-100">
           <CardTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
@@ -199,33 +206,33 @@ export default function AgentActivityPage() {
             Multi-Agent Pipeline Execution Graph
           </CardTitle>
           <CardDescription className="text-xs text-slate-500">
-            Orchestrated workflow connecting Planner, Weather/Ocean, Hazard/Geofence, and Synthesizer agents
+            Real-time status highlight across Planner, Weather/Ocean, Hazard/Geofence, and Synthesizer nodes
           </CardDescription>
         </CardHeader>
 
         <CardContent className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-5 gap-3 relative">
-            {/* Node 1: User Query */}
+            {/* Node 1: Multilingual / Input */}
             <div
               className={`p-4 rounded-xl border text-center transition-all ${
-                activeStep >= 1
+                activeStep >= 0
                   ? "bg-cyan-50 border-cyan-400 text-cyan-900 shadow-sm"
                   : "bg-slate-50 border-slate-200 text-slate-400"
               }`}
             >
               <div className="h-8 w-8 rounded-full bg-cyan-100 text-cyan-700 flex items-center justify-center mx-auto mb-2 font-bold text-xs">
-                1
+                <Globe className="h-4 w-4" />
               </div>
-              <div className="font-bold text-xs">User Query</div>
-              <div className="text-[10px] text-slate-500 mt-1 font-mono">Natural Language</div>
+              <div className="font-bold text-xs">Multilingual Input</div>
+              <div className="text-[10px] text-slate-500 mt-1 font-mono">Script Detection</div>
             </div>
 
             {/* Node 2: Planner Agent */}
             <div
               className={`p-4 rounded-xl border text-center transition-all ${
-                activeStep >= 1 && activeStep <= 3
-                  ? "bg-blue-50 border-blue-500 text-blue-900 shadow-md ring-2 ring-blue-400/30"
-                  : activeStep > 3
+                activeStep === 1
+                  ? "bg-blue-50 border-blue-500 text-blue-900 shadow-md ring-2 ring-blue-400/30 animate-pulse"
+                  : activeStep > 1
                   ? "bg-emerald-50 border-emerald-400 text-emerald-900"
                   : "bg-slate-50 border-slate-200 text-slate-400"
               }`}
@@ -241,8 +248,10 @@ export default function AgentActivityPage() {
             <div className="space-y-2">
               <div
                 className={`p-2.5 rounded-xl border text-center transition-all ${
-                  activeStep >= 2
-                    ? "bg-cyan-50 border-cyan-400 text-cyan-900 shadow-sm"
+                  activeStep === 2
+                    ? "bg-cyan-50 border-cyan-500 text-cyan-900 shadow-md ring-2 ring-cyan-400/30 animate-pulse"
+                    : activeStep > 2
+                    ? "bg-emerald-50 border-emerald-400 text-emerald-900"
                     : "bg-slate-50 border-slate-200 text-slate-400"
                 }`}
               >
@@ -255,8 +264,10 @@ export default function AgentActivityPage() {
 
               <div
                 className={`p-2.5 rounded-xl border text-center transition-all ${
-                  activeStep >= 2
-                    ? "bg-amber-50 border-amber-400 text-amber-900 shadow-sm"
+                  activeStep === 2
+                    ? "bg-amber-50 border-amber-500 text-amber-900 shadow-md ring-2 ring-amber-400/30 animate-pulse"
+                    : activeStep > 2
+                    ? "bg-emerald-50 border-emerald-400 text-emerald-900"
                     : "bg-slate-50 border-slate-200 text-slate-400"
                 }`}
               >
@@ -272,7 +283,7 @@ export default function AgentActivityPage() {
             <div
               className={`p-4 rounded-xl border text-center transition-all ${
                 activeStep === 3
-                  ? "bg-purple-50 border-purple-500 text-purple-900 shadow-md ring-2 ring-purple-400/30"
+                  ? "bg-purple-50 border-purple-500 text-purple-900 shadow-md ring-2 ring-purple-400/30 animate-pulse"
                   : activeStep > 3
                   ? "bg-emerald-50 border-emerald-400 text-emerald-900"
                   : "bg-slate-50 border-slate-200 text-slate-400"
@@ -297,53 +308,60 @@ export default function AgentActivityPage() {
                 <CheckCircle2 className="h-4 w-4" />
               </div>
               <div className="font-bold text-xs">Safe Advisory</div>
-              <div className="text-[10px] text-slate-500 mt-1 font-mono">Regional Output</div>
+              <div className="text-[10px] text-slate-500 mt-1 font-mono">Final Output</div>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Friendly Human-Readable Execution Log */}
+      {/* Live Agent Thinking Trace Component */}
       <Card className="bg-white border-slate-200 text-slate-900 shadow-sm">
         <CardHeader className="pb-3 border-b border-slate-100">
           <CardTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
             <FileText className="h-4 w-4 text-cyan-700" />
-            Agent Reasoning & Step Log
+            Live Agent Execution Trace & Telemetry
           </CardTitle>
           <CardDescription className="text-xs text-slate-500">
-            A step-by-step breakdown of how ORCA checked real ocean data and rules for your question
+            Real-time SSE progress events captured directly from graph node execution
           </CardDescription>
         </CardHeader>
 
-        <CardContent className="p-4 space-y-3 font-sans">
-          {stepLogs.length === 0 ? (
-            <div className="text-xs text-slate-400 text-center py-6">
-              Click "Watch AI Think" above to start the live execution trace.
+        <CardContent className="p-4 space-y-4">
+          {errorMsg && (
+            <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 text-rose-600 shrink-0" />
+              <span>{errorMsg}</span>
+            </div>
+          )}
+
+          {steps.length === 0 && !isRunning ? (
+            <div className="text-xs text-slate-400 text-center py-8 border border-dashed border-slate-200 rounded-xl">
+              Click "Watch AI Think" above to start the live Server-Sent Events execution trace.
             </div>
           ) : (
-            stepLogs.map((log) => (
-              <div
-                key={log.id}
-                className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs"
-              >
-                <div className="flex items-start gap-2.5">
-                  <div className="p-1.5 rounded-lg bg-cyan-100 text-cyan-800 font-bold shrink-0 mt-0.5">
-                    <CheckCircle2 className="h-4 w-4 text-cyan-700" />
-                  </div>
-                  <div>
-                    <div className="font-bold text-slate-900 flex items-center gap-2">
-                      <span>{log.agent}</span>
-                    </div>
-                    <p className="text-slate-600 mt-0.5 text-xs leading-relaxed">{log.message}</p>
-                  </div>
-                </div>
+            <AgentThinkingTrace steps={steps} isStreaming={isRunning} />
+          )}
 
-                <Badge variant="outline" className="bg-white text-slate-600 border-slate-200 text-[10px] font-mono self-end sm:self-center shrink-0">
-                  <Clock className="h-3 w-3 mr-1 text-slate-400" />
-                  {log.durationMs}ms
-                </Badge>
+          {finalResult && (
+            <div className="mt-4 p-4 rounded-xl bg-emerald-50/80 border border-emerald-200 text-emerald-950 space-y-2">
+              <div className="font-bold text-xs text-emerald-900 flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                <span>Live Execution Complete — Final Answer:</span>
               </div>
-            ))
+              <p className="text-xs leading-relaxed text-slate-800 whitespace-pre-line font-sans">
+                {finalResult.finalAnswer}
+              </p>
+              {finalResult.sources && finalResult.sources.length > 0 && (
+                <div className="pt-2 flex flex-wrap items-center gap-1.5 border-t border-emerald-200/60">
+                  <span className="text-[10px] font-mono text-emerald-800">Cited Data Sources:</span>
+                  {finalResult.sources.map((src) => (
+                    <span key={src} className="px-2 py-0.5 rounded-full bg-white/80 border border-emerald-300 text-emerald-900 text-[10px] font-semibold">
+                      {src}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
         </CardContent>
       </Card>

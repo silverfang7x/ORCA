@@ -1,7 +1,7 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { runOrcaGraph } from './graph';
+import { runOrcaGraph, AgentProgressEvent } from './graph';
 import { SOSRequest, BroadcastAlert, LocationQuery } from '@orca/shared';
 
 dotenv.config();
@@ -80,6 +80,50 @@ app.post('/api/query', async (req: Request, res: Response) => {
       error: 'Failed to process query',
       message: error?.message || 'An unexpected error occurred.'
     });
+  }
+});
+
+/**
+ * 1b. POST /api/query/stream
+ * Server-Sent Events (SSE) streaming endpoint for real-time agent execution progress.
+ */
+app.post('/api/query/stream', async (req: Request, res: Response) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders?.();
+
+  try {
+    const { userQuery, location } = req.body as {
+      userQuery: string;
+      location?: LocationQuery;
+    };
+
+    if (!userQuery || typeof userQuery !== 'string' || !userQuery.trim()) {
+      res.write(`event: error\ndata: ${JSON.stringify({ error: 'userQuery is required' })}\n\n`);
+      return res.end();
+    }
+
+    const finalState = await runOrcaGraph(userQuery, location, (event: AgentProgressEvent) => {
+      res.write(`event: progress\ndata: ${JSON.stringify(event)}\n\n`);
+    });
+
+    queryHistoryStore.push({
+      id: `HIS-${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      timeLabel: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      userQuery,
+      location,
+      waveHeight: finalState.weatherData?.waveHeightMeters || 1.4,
+      seaSurfaceTemp: finalState.weatherData?.seaSurfaceTempCelsius || 28.2,
+    });
+
+    res.write(`event: complete\ndata: ${JSON.stringify(finalState)}\n\n`);
+    res.end();
+  } catch (error: any) {
+    console.error('[API /api/query/stream Error]:', error);
+    res.write(`event: error\ndata: ${JSON.stringify({ error: error?.message || 'Streaming failed' })}\n\n`);
+    res.end();
   }
 });
 
