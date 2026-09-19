@@ -93,10 +93,7 @@ function ChatContent() {
     const startTime = Date.now();
 
     try {
-      const location = await getBrowserLocation();
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
-
-      const response = await fetch(`${apiUrl}/api/query/stream`, {
+      const response = await fetch("/api/query/stream", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -204,9 +201,8 @@ function ChatContent() {
       // Fallback: standard POST /api/query
       try {
         const location = await getBrowserLocation();
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
-        const res = await fetch(`${apiUrl}/api/query`, {
+        const res = await fetch("/api/query", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ userQuery: queryText, location })
@@ -260,9 +256,8 @@ function ChatContent() {
   const handleSOSClick = async () => {
     try {
       const location = await getBrowserLocation();
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
-      const res = await fetch(`${apiUrl}/api/sos`, {
+      const res = await fetch("/api/sos", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"

@@ -101,8 +101,7 @@ export default function FishermanHazardsAlertsPage() {
   const handleRefresh = async () => {
     setIsLoading(true);
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
-      const res = await fetch(`${apiUrl}/api/broadcasts`);
+      const res = await fetch("/api/broadcasts");
       if (res.ok) {
         const broadcasts = await res.json();
         if (Array.isArray(broadcasts) && broadcasts.length > 0) {

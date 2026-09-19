@@ -38,8 +38,7 @@ export function HistoricalTrendChart() {
   useEffect(() => {
     async function fetchHistory() {
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
-        const res = await fetch(`${apiUrl}/api/history`);
+        const res = await fetch("/api/history");
         if (res.ok) {
           const data = await res.json();
           if (Array.isArray(data) && data.length > 0) {
