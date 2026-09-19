@@ -4,9 +4,17 @@ import { Badge } from "@/components/ui/badge";
 import { Waves, User, ExternalLink, ShieldCheck } from "lucide-react";
 import { ExplainabilityPanel } from "./ExplainabilityPanel";
 import { QuickOverviewList } from "./QuickOverviewList";
+import { InlineAgentTrace } from "./InlineAgentTrace";
+import { AgentProgressStep } from "./AgentThinkingTrace";
 
 interface MessageBubbleProps {
-  message: ChatMessage & { weatherData?: any; hazardData?: any };
+  message: ChatMessage & {
+    weatherData?: any;
+    hazardData?: any;
+    thinkingSteps?: AgentProgressStep[];
+    reasoningSummary?: string;
+    isStreaming?: boolean;
+  };
 }
 
 export function MessageBubble({ message }: MessageBubbleProps) {
@@ -19,7 +27,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
       transition={{ duration: 0.2, ease: "easeOut" }}
       className={`flex w-full my-3 ${isUser ? "justify-end" : "justify-start"}`}
     >
-      <div className={`flex gap-3 max-w-[88%] sm:max-w-[78%] ${isUser ? "flex-row-reverse" : "flex-row"}`}>
+      <div className={`flex gap-3 max-w-[92%] sm:max-w-[82%] ${isUser ? "flex-row-reverse" : "flex-row"}`}>
         {/* Avatar */}
         <div
           className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 mt-1 shadow-sm ${
@@ -52,15 +60,26 @@ export function MessageBubble({ message }: MessageBubbleProps) {
             </div>
           )}
 
-          {/* Quick Overview Summary (Rendered inside Assistant Message) */}
+          {/* Inline Multi-Agent Thinking Trace & Reasoning Summary */}
+          {!isUser && (message.thinkingSteps || message.reasoningSummary || message.isStreaming) && (
+            <InlineAgentTrace
+              steps={message.thinkingSteps || []}
+              isStreaming={message.isStreaming}
+              reasoningSummary={message.reasoningSummary}
+            />
+          )}
+
+          {/* Quick Overview Summary */}
           {!isUser && (message.weatherData || message.hazardData) && (
             <QuickOverviewList weatherData={message.weatherData} hazardData={message.hazardData} />
           )}
 
           {/* Message Content */}
-          <div className="whitespace-pre-wrap font-sans tracking-wide">
-            {message.content}
-          </div>
+          {message.content && (
+            <div className="whitespace-pre-wrap font-sans tracking-wide">
+              {message.content}
+            </div>
+          )}
 
           {/* Explainability Panel ("How ORCA Decided") */}
           {!isUser && message.sources && message.sources.length > 0 && (
