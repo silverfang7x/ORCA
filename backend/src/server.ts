@@ -218,8 +218,10 @@ app.get('/api/history', (req: Request, res: Response) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`ORCA Backend server listening on port ${PORT}`);
-});
+if (!process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`ORCA Backend server listening on port ${PORT}`);
+  });
+}
 
 export default app;
