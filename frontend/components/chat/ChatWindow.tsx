@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Waves, Send, Navigation, AlertTriangle, ArrowLeft, Loader2, Compass } from "lucide-react";
 import Link from "next/link";
+import { useTranslation } from "@/lib/LanguageContext";
 
 interface ChatWindowProps {
   onSendMessage: (query: string) => Promise<void>;
@@ -18,15 +19,16 @@ interface ChatWindowProps {
   onSOSClick?: () => void;
 }
 
-const PRESET_QUERIES = [
-  "Is it safe to fish near Kochi tomorrow?",
-  "What is the wave height and tide forecast today?",
-  "Are there any cyclone alerts or restricted zones nearby?",
-];
-
 export function ChatWindow({ onSendMessage, messages, isLoading, onSOSClick }: ChatWindowProps) {
   const [inputText, setInputText] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
+  const { t } = useTranslation();
+
+  const PRESET_QUERIES = [
+    t("chat.preset_1"),
+    t("chat.preset_2"),
+    t("chat.preset_3"),
+  ];
 
   // Auto-scroll to bottom of chat on message updates
   useEffect(() => {
@@ -69,10 +71,10 @@ export function ChatWindow({ onSendMessage, messages, isLoading, onSOSClick }: C
             </div>
             <div>
               <div className="flex items-center gap-1.5 sm:gap-2">
-                <span className="font-bold text-xs sm:text-sm text-slate-900 tracking-tight">ORCA Assistant</span>
+                <span className="font-bold text-xs sm:text-sm text-slate-900 tracking-tight">{t("chat.assistant_title")}</span>
                 <Badge variant="outline" className="text-[9px] sm:text-[10px] px-1.5 py-0 border-emerald-300 text-emerald-700 bg-emerald-50">
                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-ping inline-block mr-1" />
-                  ACTIVE
+                  {t("chat.active")}
                 </Badge>
               </div>
               <div className="text-[10px] sm:text-[11px] text-slate-500 flex items-center gap-1 font-mono truncate max-w-[160px] sm:max-w-none">
@@ -91,7 +93,7 @@ export function ChatWindow({ onSendMessage, messages, isLoading, onSOSClick }: C
           className="bg-red-600 hover:bg-red-700 text-white font-semibold text-xs px-3 py-2 min-h-[44px] gap-1 shadow-sm shrink-0"
         >
           <AlertTriangle className="h-4 w-4 animate-pulse" />
-          <span className="hidden sm:inline">EMERGENCY</span> SOS
+          <span>{t("button.emergency_sos")}</span>
         </Button>
       </header>
 
@@ -166,7 +168,7 @@ export function ChatWindow({ onSendMessage, messages, isLoading, onSOSClick }: C
           <Input
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
-            placeholder="Ask ORCA safety, tides, weather, hazards..."
+            placeholder={t("chat.placeholder")}
             disabled={isLoading}
             className="flex-1 bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-400 text-sm focus-visible:ring-cyan-600 min-h-[44px]"
           />
@@ -178,7 +180,7 @@ export function ChatWindow({ onSendMessage, messages, isLoading, onSOSClick }: C
             className="bg-cyan-700 hover:bg-cyan-600 text-white font-semibold h-11 min-h-[44px] px-4 gap-1.5 shrink-0 shadow-sm"
           >
             {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-            <span className="hidden sm:inline">Send</span>
+            <span className="hidden sm:inline">{t("button.send")}</span>
           </Button>
         </form>
       </footer>

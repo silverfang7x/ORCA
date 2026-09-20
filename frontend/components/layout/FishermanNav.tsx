@@ -19,30 +19,32 @@ import {
   Anchor
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useTranslation } from "@/lib/LanguageContext";
 
 const DESKTOP_NAV_ITEMS = [
-  { name: "Home", href: "/fisherman/home", icon: Home },
-  { name: "Chat", href: "/fisherman/chat", icon: MessageSquareText },
-  { name: "Fishing Advisory", href: "/fisherman/fishing-advisory", icon: Compass },
-  { name: "Weather & Ocean Data", href: "/fisherman/weather-ocean-data", icon: Waves },
-  { name: "Hazards & Alerts", href: "/fisherman/hazards-alerts", icon: AlertTriangle },
-  { name: "Geofencing & Boundaries", href: "/fisherman/geofencing-boundaries", icon: ShieldCheck },
-  { name: "Agent Activity", href: "/fisherman/agent-activity", icon: Activity },
-  { name: "Reports & Analytics", href: "/fisherman/reports-analytics", icon: BarChart3 },
-  { name: "Users & Permissions", href: "/fisherman/users-permissions", icon: Users },
-  { name: "Settings", href: "/fisherman/settings", icon: Settings },
+  { key: "nav.home", href: "/fisherman/home", icon: Home },
+  { key: "nav.chat", href: "/fisherman/chat", icon: MessageSquareText },
+  { key: "nav.fishing_advisory", href: "/fisherman/fishing-advisory", icon: Compass },
+  { key: "nav.weather_ocean_data", href: "/fisherman/weather-ocean-data", icon: Waves },
+  { key: "nav.hazards_alerts", href: "/fisherman/hazards-alerts", icon: AlertTriangle },
+  { key: "nav.geofencing_boundaries", href: "/fisherman/geofencing-boundaries", icon: ShieldCheck },
+  { key: "nav.agent_activity", href: "/fisherman/agent-activity", icon: Activity },
+  { key: "nav.reports_analytics", href: "/fisherman/reports-analytics", icon: BarChart3 },
+  { key: "nav.users_permissions", href: "/fisherman/users-permissions", icon: Users },
+  { key: "nav.settings", href: "/fisherman/settings", icon: Settings },
 ];
 
 const MOBILE_NAV_ITEMS = [
-  { name: "Home", href: "/fisherman/home", icon: Home },
-  { name: "Map", href: "/fisherman/geofencing-boundaries", icon: MapPin },
-  { name: "Alerts", href: "/fisherman/hazards-alerts", icon: AlertTriangle },
-  { name: "Fishing Zones", href: "/fisherman/fishing-advisory", icon: Fish },
-  { name: "Profile", href: "/fisherman/settings", icon: User },
+  { key: "nav.home", href: "/fisherman/home", icon: Home },
+  { key: "nav.map", href: "/fisherman/geofencing-boundaries", icon: MapPin },
+  { key: "nav.alerts", href: "/fisherman/hazards-alerts", icon: AlertTriangle },
+  { key: "nav.fishing_zones", href: "/fisherman/fishing-advisory", icon: Fish },
+  { key: "nav.profile", href: "/fisherman/settings", icon: User },
 ];
 
 export function FishermanNav() {
   const pathname = usePathname();
+  const { t } = useTranslation();
 
   return (
     <>
@@ -56,7 +58,7 @@ export function FishermanNav() {
             </div>
             <div>
               <span className="font-bold text-base text-white tracking-tight">ORCA</span>
-              <span className="text-[10px] text-cyan-400 block -mt-1 font-mono">Fisherman Portal</span>
+              <span className="text-[10px] text-cyan-400 block -mt-1 font-mono">{t("nav.fisherman_portal")}</span>
             </div>
           </Link>
           <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-emerald-500/40 text-emerald-400 bg-emerald-950/30">
@@ -80,7 +82,7 @@ export function FishermanNav() {
                 }`}
               >
                 <Icon className={`h-4 w-4 shrink-0 ${isActive ? "text-white" : "text-slate-400"}`} />
-                <span className="truncate">{item.name}</span>
+                <span className="truncate">{t(item.key)}</span>
               </Link>
             );
           })}
@@ -108,7 +110,7 @@ export function FishermanNav() {
                 }`}
               >
                 <Icon className={`h-5 w-5 mb-0.5 ${isActive ? "text-cyan-400" : "text-slate-400"}`} />
-                <span>{item.name}</span>
+                <span>{t(item.key)}</span>
               </Link>
             );
           })}
