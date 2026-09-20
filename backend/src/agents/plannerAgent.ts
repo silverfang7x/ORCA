@@ -5,7 +5,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const DEFAULT_INTENT = { needsWeather: true, needsHazard: true };
-const GROQ_MODELS = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'];
+const GROQ_MODELS = ['openai/gpt-oss-20b', 'qwen/qwen3.8-27b', 'groq/compound-mini'];
 
 /**
  * Planner Agent: Analyzes the user's query using Groq LLM
