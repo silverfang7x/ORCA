@@ -170,14 +170,19 @@ export async function getWeatherOceanData(query: LocationQuery): Promise<Weather
     let marineData: OpenMeteoMarineResponse | null = null;
     let forecastData: OpenMeteoForecastResponse | null = null;
 
+    let marineErr: Error | null = null;
+    let forecastErr: Error | null = null;
+
     if (marineResResult.status === 'fulfilled' && marineResResult.value.ok) {
       marineData = (await marineResResult.value.json()) as OpenMeteoMarineResponse;
       console.error(`[weatherOceanAgent SUCCESS] Marine API returned ${marineData?.hourly?.time?.length || 0} hourly samples`);
     } else {
       if (marineResResult.status === 'rejected') {
+        marineErr = marineResResult.reason instanceof Error ? marineResResult.reason : new Error(String(marineResResult.reason));
         console.error('[weatherOceanAgent ERROR] Marine API fetch rejected/timed out:', marineResResult.reason?.message || marineResResult.reason);
       } else {
         const bodyText = await marineResResult.value.text().catch(() => 'Unable to read body');
+        marineErr = new Error(`Marine API HTTP ${marineResResult.value.status} ${marineResResult.value.statusText}: ${bodyText}`);
         console.error(`[weatherOceanAgent ERROR] Marine API returned HTTP ${marineResResult.value.status} ${marineResResult.value.statusText}: ${bodyText}`);
       }
     }
@@ -187,16 +192,19 @@ export async function getWeatherOceanData(query: LocationQuery): Promise<Weather
       console.error(`[weatherOceanAgent SUCCESS] Forecast API returned ${forecastData?.hourly?.time?.length || 0} hourly samples`);
     } else {
       if (forecastResResult.status === 'rejected') {
+        forecastErr = forecastResResult.reason instanceof Error ? forecastResResult.reason : new Error(String(forecastResResult.reason));
         console.error('[weatherOceanAgent ERROR] Forecast API fetch rejected/timed out:', forecastResResult.reason?.message || forecastResResult.reason);
       } else {
         const bodyText = await forecastResResult.value.text().catch(() => 'Unable to read body');
+        forecastErr = new Error(`Forecast API HTTP ${forecastResResult.value.status} ${forecastResResult.value.statusText}: ${bodyText}`);
         console.error(`[weatherOceanAgent ERROR] Forecast API returned HTTP ${forecastResResult.value.status} ${forecastResResult.value.statusText}: ${bodyText}`);
       }
     }
 
     // If both API calls failed completely to return hourly data, fallback immediately
     if (!marineData?.hourly && !forecastData?.hourly) {
-      console.error('[weatherOceanAgent FALLBACK] Both Marine and Forecast APIs failed to return hourly data. Returning FALLBACK_WEATHER_DATA.');
+      const err = marineErr || forecastErr || new Error(`Both Marine API and Forecast API failed to return data`);
+      console.error("OPEN-METEO FETCH FAILED:", err);
       return FALLBACK_WEATHER_DATA;
     }
 
@@ -224,7 +232,8 @@ export async function getWeatherOceanData(query: LocationQuery): Promise<Weather
 
     const isPartialFallback = !marineData?.hourly || !forecastData?.hourly;
     if (isPartialFallback) {
-      console.error(`[weatherOceanAgent PARTIAL FALLBACK] marineData.hourly=${!!marineData?.hourly}, forecastData.hourly=${!!forecastData?.hourly}. Setting source to fallback values.`);
+      const err = marineErr || forecastErr || new Error(`Partial Open-Meteo failure: marineData.hourly=${!!marineData?.hourly}, forecastData.hourly=${!!forecastData?.hourly}`);
+      console.error("OPEN-METEO FETCH FAILED:", err);
     }
 
     const source = isPartialFallback
@@ -239,7 +248,8 @@ export async function getWeatherOceanData(query: LocationQuery): Promise<Weather
       source,
     };
   } catch (error: any) {
-    console.error('[weatherOceanAgent EXCEPTION] Unexpected exception during execution, returning safe fallback:', error?.stack || error);
+    const err = error instanceof Error ? error : new Error(String(error));
+    console.error("OPEN-METEO FETCH FAILED:", err);
     return FALLBACK_WEATHER_DATA;
   }
 }
