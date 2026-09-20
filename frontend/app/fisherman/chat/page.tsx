@@ -95,6 +95,7 @@ function ChatContent() {
     try {
       const location = await getBrowserLocation();
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+      const preferredLanguage = typeof window !== "undefined" ? localStorage.getItem("orca_language_preference") || "en" : "en";
 
       const response = await fetch(`${apiUrl}/api/query/stream`, {
         method: "POST",
@@ -103,7 +104,8 @@ function ChatContent() {
         },
         body: JSON.stringify({
           userQuery: queryText,
-          location
+          location,
+          preferredLanguage
         })
       });
 
@@ -203,13 +205,12 @@ function ChatContent() {
 
       // Fallback: standard POST /api/query
       try {
-        const location = await getBrowserLocation();
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+        const preferredLanguage = typeof window !== "undefined" ? localStorage.getItem("orca_language_preference") || "en" : "en";
 
         const res = await fetch(`${apiUrl}/api/query`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userQuery: queryText, location })
+          body: JSON.stringify({ userQuery: queryText, location, preferredLanguage })
         });
 
         if (!res.ok) throw new Error(`HTTP ${res.status}`);

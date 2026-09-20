@@ -4,24 +4,58 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const DEFAULT_INTENT = { needsWeather: true, needsHazard: true };
 const GROQ_MODELS = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'];
 
 /**
- * Planner Agent: Analyzes the user's query using Groq LLM
- * and classifies intent to decide which specialized agents should be executed.
+ * Rule-based classifier fallback when LLM calls fail or API key is not present/invalid.
+ */
+export function classifyQueryWithRules(queryText: string) {
+  const q = queryText.toLowerCase().trim();
+
+  // Greetings & casual conversation
+  const greetings = ['hello', 'hi', 'hey', 'namaste', 'good morning', 'good afternoon', 'good evening', 'who are you', 'what is your name', 'thanks', 'thank you'];
+  if (greetings.some(g => q === g || q.startsWith(g + ' ') || q.startsWith(g + '!'))) {
+    return { needsWeather: false, needsHazard: false, isOffTopic: true, isCycloneQuery: false };
+  }
+
+  // Non-maritime / general knowledge queries
+  const offTopicPatterns = ['capital of', 'tell me a joke', '2+2', 'recipe', 'who won', 'president', 'movie', 'code', 'python', 'javascript'];
+  if (offTopicPatterns.some(p => q.includes(p))) {
+    return { needsWeather: false, needsHazard: false, isOffTopic: true, isCycloneQuery: false };
+  }
+
+  // Cyclone / Extreme storm specific
+  if (q.includes('cyclone') || q.includes('storm') || q.includes('typhoon') || q.includes('hurricane')) {
+    return { needsWeather: true, needsHazard: true, isOffTopic: false, isCycloneQuery: true };
+  }
+
+  // Weather / Tide / Fishing safety
+  const weatherKeywords = ['weather', 'wave', 'wind', 'tide', 'temp', 'temperature', 'sea', 'ocean', 'fish', 'fishing', 'safe', 'safety', 'kochi', 'chennai', 'mumbai', 'goa', 'harbour', 'harbor', 'port', 'boat'];
+  const relatesToMaritime = weatherKeywords.some(k => q.includes(k));
+
+  if (!relatesToMaritime && q.length < 30) {
+    return { needsWeather: false, needsHazard: false, isOffTopic: true, isCycloneQuery: false };
+  }
+
+  return { needsWeather: true, needsHazard: true, isOffTopic: false, isCycloneQuery: false };
+}
+
+/**
+ * Planner Agent: Analyzes user query using Groq LLM with rule fallback.
  */
 export async function plannerAgent(state: AgentState): Promise<Partial<AgentState>> {
   const query = state.translatedQuery || state.userQuery || '';
 
   if (!query.trim()) {
-    return { intent: DEFAULT_INTENT };
+    return { intent: { needsWeather: true, needsHazard: true, isOffTopic: false, isCycloneQuery: false } };
   }
 
+  const ruleIntent = classifyQueryWithRules(query);
+
   const apiKey = process.env.GROQ_API_KEY;
-  if (!apiKey || apiKey.trim() === '' || apiKey === 'your_groq_api_key_here') {
-    console.warn('[PlannerAgent] GROQ_API_KEY is not configured. Defaulting to both weather & hazard intent.');
-    return { intent: DEFAULT_INTENT };
+  if (!apiKey || apiKey.trim() === '' || apiKey.includes('your_groq_api_key')) {
+    console.warn('[PlannerAgent] GROQ_API_KEY is not configured or placeholder. Using rule-based intent classification.');
+    return { intent: ruleIntent };
   }
 
   try {
@@ -30,13 +64,17 @@ export async function plannerAgent(state: AgentState): Promise<Partial<AgentStat
 Analyze the user query and output ONLY valid JSON matching this exact structure:
 {
   "needsWeather": boolean,
-  "needsHazard": boolean
+  "needsHazard": boolean,
+  "isOffTopic": boolean,
+  "isCycloneQuery": boolean
 }
 
 Classification Rules:
-- "needsWeather": true if query relates to weather, wind, wave height, sea surface temperature, sea conditions, fishing advisory, or tides.
-- "needsHazard": true if query relates to safety, hazard warnings, restricted maritime zones, boundary lines, cyclones, or danger alerts.
-- Set BOTH to true if query asks about overall fishing safety or general advice (e.g. "is it safe to fish near Kochi tomorrow?").`;
+- "isOffTopic": true if query is a greeting ("hello"), casual chat, non-maritime question, or unrelated topic.
+- "isCycloneQuery": true if query asks about cyclones, storms, typhoons, or extreme weather events.
+- "needsWeather": true if query asks about ocean weather, wind, wave height, sea temperature, fishing advisory, or tides.
+- "needsHazard": true if query asks about safety warnings, geofences, restricted zones, cyclones, or danger alerts.
+- Set both needsWeather & needsHazard to false if isOffTopic is true.`;
 
     let content = '';
     const tStart = Date.now();
@@ -59,28 +97,27 @@ Classification Rules:
           console.log(`[PERF TIMING] Planner Agent Groq Call (${modelName}): ${Date.now() - tStart}ms`);
           break;
         }
-      } catch (err) {
+      } catch {
         continue;
       }
     }
 
     if (!content) {
-      console.log(`[PERF TIMING] Planner Agent Groq Call failed/exhausted: ${Date.now() - tStart}ms`);
-      return { intent: DEFAULT_INTENT };
+      console.log(`[PERF TIMING] Planner Agent Groq Call failed: using rule-based classification.`);
+      return { intent: ruleIntent };
     }
 
     const parsed = JSON.parse(content);
-    const needsWeather = typeof parsed.needsWeather === 'boolean' ? parsed.needsWeather : true;
-    const needsHazard = typeof parsed.needsHazard === 'boolean' ? parsed.needsHazard : true;
-
     return {
       intent: {
-        needsWeather,
-        needsHazard
+        needsWeather: typeof parsed.needsWeather === 'boolean' ? parsed.needsWeather : ruleIntent.needsWeather,
+        needsHazard: typeof parsed.needsHazard === 'boolean' ? parsed.needsHazard : ruleIntent.needsHazard,
+        isOffTopic: typeof parsed.isOffTopic === 'boolean' ? parsed.isOffTopic : ruleIntent.isOffTopic,
+        isCycloneQuery: typeof parsed.isCycloneQuery === 'boolean' ? parsed.isCycloneQuery : ruleIntent.isCycloneQuery,
       }
     };
   } catch (error) {
-    console.error('[PlannerAgent] Exception during intent classification, falling back to default:', error);
-    return { intent: DEFAULT_INTENT };
+    console.error('[PlannerAgent] Exception during intent classification, using rule fallback:', error);
+    return { intent: ruleIntent };
   }
 }

@@ -21,13 +21,78 @@ interface OpenMeteoForecastResponse {
   };
 }
 
+export interface ResolvedLocationQuery extends LocationQuery {
+  locationName?: string;
+}
+
 const FALLBACK_WEATHER_DATA: WeatherOceanData = {
   waveHeightMeters: 1.0,
   seaSurfaceTempCelsius: 28,
   windSpeedKmh: 15,
   tideTimes: [],
+  locationName: 'Coastal Sector',
   source: 'Open-Meteo Marine API (fallback values)',
 };
+
+/**
+ * Extracts coastal location coordinates and target date from query text.
+ */
+export function extractLocationAndDateFromQuery(
+  queryText: string,
+  baseLocation?: LocationQuery
+): ResolvedLocationQuery {
+  const q = (queryText || '').toLowerCase();
+
+  const LOCATIONS: { names: string[]; lat: number; lng: number; label: string }[] = [
+    { names: ['kochi', 'cochin', 'eranakulam', 'ernakulam'], lat: 9.9312, lng: 76.2673, label: 'Kochi' },
+    { names: ['munambam'], lat: 10.1812, lng: 76.1685, label: 'Munambam' },
+    { names: ['vizhinjam', 'trivandrum', 'thiruvananthapuram'], lat: 8.3800, lng: 76.9900, label: 'Vizhinjam' },
+    { names: ['chennai', 'madras'], lat: 13.0827, lng: 80.2707, label: 'Chennai' },
+    { names: ['mumbai', 'bombay'], lat: 18.9220, lng: 72.8347, label: 'Mumbai' },
+    { names: ['goa', 'panaji', 'panjim', 'vasco'], lat: 15.4989, lng: 73.8278, label: 'Goa' },
+    { names: ['mangalore', 'mangaluru'], lat: 12.9141, lng: 74.8560, label: 'Mangalore' },
+    { names: ['kozhikode', 'calicut', 'beypore'], lat: 11.2588, lng: 75.7804, label: 'Kozhikode' },
+    { names: ['kollam', 'quilon'], lat: 8.8932, lng: 76.6141, label: 'Kollam' },
+    { names: ['kanyakumari', 'cape comorin'], lat: 8.0883, lng: 77.5385, label: 'Kanyakumari' },
+    { names: ['puducherry', 'pondicherry', 'pondy'], lat: 11.9416, lng: 79.8083, label: 'Puducherry' },
+    { names: ['visakhapatnam', 'vizag'], lat: 17.6868, lng: 83.2185, label: 'Visakhapatnam' },
+    { names: ['paradeep', 'paradip'], lat: 20.3164, lng: 86.6114, label: 'Paradeep' },
+    { names: ['veraval', 'porbandar', 'gujarat'], lat: 20.9000, lng: 70.3667, label: 'Veraval' },
+    { names: ['alappuzha', 'alleppey'], lat: 9.4981, lng: 76.3388, label: 'Alappuzha' }
+  ];
+
+  let matchedLat = baseLocation?.latitude ?? 9.9312;
+  let matchedLng = baseLocation?.longitude ?? 76.2673;
+  let locationName: string | undefined = undefined;
+
+  for (const loc of LOCATIONS) {
+    if (loc.names.some(n => q.includes(n))) {
+      matchedLat = loc.lat;
+      matchedLng = loc.lng;
+      locationName = loc.label;
+      break;
+    }
+  }
+
+  let baseDate = new Date();
+  if (baseLocation?.date) {
+    const p = new Date(baseLocation.date);
+    if (!isNaN(p.getTime())) baseDate = p;
+  }
+
+  if (q.includes('tomorrow')) {
+    baseDate.setDate(baseDate.getDate() + 1);
+  } else if (q.includes('day after tomorrow')) {
+    baseDate.setDate(baseDate.getDate() + 2);
+  }
+
+  return {
+    latitude: matchedLat,
+    longitude: matchedLng,
+    date: baseDate.toISOString(),
+    locationName: locationName || 'Kochi Coast'
+  };
+}
 
 /**
  * Executes a fetch request with a configurable AbortController timeout.
@@ -44,9 +109,6 @@ async function fetchWithTimeout(url: string, timeoutMs = 5000): Promise<Response
   }
 }
 
-/**
- * Helper to return YYYY-MM-DD string shifted by days.
- */
 function getDateStringWithOffset(dateInput?: string, dayOffset = 0): string {
   let baseDate = new Date();
   if (dateInput) {
@@ -61,9 +123,6 @@ function getDateStringWithOffset(dateInput?: string, dayOffset = 0): string {
   return targetDate.toISOString().split('T')[0];
 }
 
-/**
- * Finds the index in an Open-Meteo hourly.time array closest to midday (12:00) of the target date.
- */
 function getMiddayIndexForDate(timeArray?: string[], targetDateStr?: string): number {
   if (!timeArray || timeArray.length === 0) return 0;
 
@@ -75,7 +134,6 @@ function getMiddayIndexForDate(timeArray?: string[], targetDateStr?: string): nu
     }
   }
 
-  // Fallback: search any 12:00
   const fallbackIndex = timeArray.findIndex((t) => t.includes('12:00'));
   if (fallbackIndex !== -1) {
     return fallbackIndex;
@@ -84,10 +142,6 @@ function getMiddayIndexForDate(timeArray?: string[], targetDateStr?: string): nu
   return Math.min(12, timeArray.length - 1);
 }
 
-/**
- * Derives local high and low tide events from hourly sea_level_height_msl data.
- * Uses local peak/trough detection across consecutive hourly samples.
- */
 function detectTideEvents(
   times?: string[],
   seaLevelValues?: (number | null)[],
@@ -111,7 +165,6 @@ function detectTideEvents(
     const isoTimeStr = times[i];
     if (!isoTimeStr) continue;
 
-    // Detect High Tide (local peak)
     if (curr > prev && curr >= next) {
       const eventDateStr = isoTimeStr.split('T')[0];
       const timePart = isoTimeStr.split('T')[1]?.substring(0, 5) || '00:00';
@@ -121,9 +174,7 @@ function detectTideEvents(
         type: 'high',
         dateStr: eventDateStr,
       });
-    }
-    // Detect Low Tide (local trough)
-    else if (curr < prev && curr <= next) {
+    } else if (curr < prev && curr <= next) {
       const eventDateStr = isoTimeStr.split('T')[0];
       const timePart = isoTimeStr.split('T')[1]?.substring(0, 5) || '00:00';
 
@@ -135,14 +186,13 @@ function detectTideEvents(
     }
   }
 
-  // Filter events strictly to the target requested date
   return tideEvents
     .filter((event) => event.dateStr === targetDateStr)
     .map(({ time, type }) => ({ time, type }));
 }
 
 /**
- * Fetches real weather and ocean data from Open-Meteo Marine & Forecast APIs with 10s AbortController timeouts and fallbacks.
+ * Fetches real weather and ocean data from Open-Meteo Marine & Forecast APIs.
  */
 export async function getWeatherOceanData(query: LocationQuery): Promise<WeatherOceanData> {
   if (!query || typeof query.latitude !== 'number' || typeof query.longitude !== 'number') {
@@ -158,7 +208,6 @@ export async function getWeatherOceanData(query: LocationQuery): Promise<Weather
     const forecastUrl = `https://api.open-meteo.com/v1/forecast?latitude=${query.latitude}&longitude=${query.longitude}&hourly=wind_speed_10m&wind_speed_unit=kmh&start_date=${targetDateStr}&end_date=${targetDateStr}`;
 
     const tWeatherStart = Date.now();
-    // Execute requests concurrently with 10-second timeout handling
     const [marineResResult, forecastResResult] = await Promise.allSettled([
       fetchWithTimeout(marineUrl, 5000),
       fetchWithTimeout(forecastUrl, 5000),
@@ -170,25 +219,12 @@ export async function getWeatherOceanData(query: LocationQuery): Promise<Weather
 
     if (marineResResult.status === 'fulfilled' && marineResResult.value.ok) {
       marineData = (await marineResResult.value.json()) as OpenMeteoMarineResponse;
-    } else {
-      const errorMsg =
-        marineResResult.status === 'rejected'
-          ? marineResResult.reason?.message || marineResResult.reason
-          : `HTTP ${marineResResult.value.status} ${marineResResult.value.statusText}`;
-      console.error('[weatherOceanAgent] Marine API fetch error:', errorMsg);
     }
 
     if (forecastResResult.status === 'fulfilled' && forecastResResult.value.ok) {
       forecastData = (await forecastResResult.value.json()) as OpenMeteoForecastResponse;
-    } else {
-      const errorMsg =
-        forecastResResult.status === 'rejected'
-          ? forecastResResult.reason?.message || forecastResResult.reason
-          : `HTTP ${forecastResResult.value.status} ${forecastResResult.value.statusText}`;
-      console.error('[weatherOceanAgent] Forecast API fetch error:', errorMsg);
     }
 
-    // If both API calls failed completely to return hourly data, fallback immediately
     if (!marineData?.hourly && !forecastData?.hourly) {
       return FALLBACK_WEATHER_DATA;
     }
@@ -203,12 +239,10 @@ export async function getWeatherOceanData(query: LocationQuery): Promise<Weather
     const forecastMiddayIdx = getMiddayIndexForDate(forecastTimeArray, targetDateStr);
     const windSpeedRaw = forecastData?.hourly?.wind_speed_10m?.[forecastMiddayIdx];
 
-    // Safely extract rounded values or fallback to default estimates
     const waveHeightMeters = typeof waveHeightRaw === 'number' ? Number(waveHeightRaw.toFixed(1)) : 1.0;
     const seaSurfaceTempCelsius = typeof sstRaw === 'number' ? Number(sstRaw.toFixed(1)) : 28;
     const windSpeedKmh = typeof windSpeedRaw === 'number' ? Number(windSpeedRaw.toFixed(1)) : 15;
 
-    // Derive high and low tide peak events from sea_level_height_msl hourly data
     const tideTimes = detectTideEvents(
       marineData?.hourly?.time,
       marineData?.hourly?.sea_level_height_msl,
@@ -228,7 +262,7 @@ export async function getWeatherOceanData(query: LocationQuery): Promise<Weather
       source,
     };
   } catch (error) {
-    console.error('[weatherOceanAgent] Unexpected exception during execution, returning safe fallback:', error);
+    console.error('[weatherOceanAgent] Exception during execution, returning safe fallback:', error);
     return FALLBACK_WEATHER_DATA;
   }
 }
@@ -241,14 +275,14 @@ export async function weatherOceanAgent(
 ): Promise<WeatherOceanData | Partial<AgentState>> {
   if (input && typeof (input as any).userQuery !== 'undefined') {
     const state = input as AgentState;
-    const queryLocation: LocationQuery = state.location || {
-      latitude: 9.9312,
-      longitude: 76.2673,
-      date: new Date().toISOString(),
-    };
+    const queryText = state.translatedQuery || state.userQuery || '';
+    const queryLocation = extractLocationAndDateFromQuery(queryText, state.location);
     const weatherData = await getWeatherOceanData(queryLocation);
+    weatherData.locationName = queryLocation.locationName;
     return { weatherData };
   } else {
-    return await getWeatherOceanData(input as LocationQuery);
+    const queryLocation = input as LocationQuery;
+    const weatherData = await getWeatherOceanData(queryLocation);
+    return weatherData;
   }
 }

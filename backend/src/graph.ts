@@ -30,6 +30,10 @@ export const OrcaStateAnnotation = Annotation.Root({
     reducer: (x, y) => y ?? x ?? '',
     default: () => ''
   }),
+  preferredLanguage: Annotation<string | undefined>({
+    reducer: (x, y) => y ?? x,
+    default: () => undefined
+  }),
   location: Annotation<LocationQuery | undefined>({
     reducer: (x, y) => y ?? x,
     default: () => undefined
@@ -98,7 +102,8 @@ export const orcaGraph = builder.compile();
 export async function runOrcaGraph(
   userQuery: string,
   location?: LocationQuery,
-  onProgress?: ProgressCallback
+  onProgress?: ProgressCallback,
+  preferredLanguage?: string
 ): Promise<AgentState> {
   const emit = (
     agent: AgentProgressEvent['agent'],
@@ -123,6 +128,8 @@ export async function runOrcaGraph(
   const t0 = Date.now();
   emit('multilingual', 'Multilingual Layer', 'started', 'Detecting query language and analyzing script range...');
   const detectedLang = await detectLanguage(userQuery);
+  const targetLang = (preferredLanguage && preferredLanguage !== 'en') ? preferredLanguage : detectedLang;
+
   const translatedQuery = detectedLang === 'en' 
     ? userQuery 
     : await translateToEnglish(userQuery, detectedLang);
@@ -131,7 +138,7 @@ export async function runOrcaGraph(
     'multilingual',
     'Multilingual Layer',
     'completed',
-    `Detected language "${detectedLang.toUpperCase()}". ${detectedLang !== 'en' ? 'Query translated to English.' : 'Query is in English.'}`,
+    `Detected language "${detectedLang.toUpperCase()}". Target output language "${targetLang.toUpperCase()}". ${detectedLang !== 'en' ? 'Query translated to English.' : 'Query is in English.'}`,
     t1 - t0
   );
 
@@ -145,6 +152,7 @@ export async function runOrcaGraph(
     userQuery,
     translatedQuery,
     detectedLanguage: detectedLang,
+    preferredLanguage,
     location,
     intent: { needsWeather: true, needsHazard: true },
     sources: [],
@@ -217,13 +225,13 @@ export async function runOrcaGraph(
   currentState = { ...currentState, ...synthRes };
 
   // 5. Final Answer Regional Translation if required
-  if (detectedLang !== 'en' && currentState.finalAnswer) {
+  if (targetLang !== 'en' && currentState.finalAnswer) {
     const tr0 = Date.now();
-    emit('multilingual', 'Multilingual Layer', 'started', `Translating final safety advisory back to regional language (${detectedLang.toUpperCase()})...`);
-    const translatedAnswer = await translateFromEnglish(currentState.finalAnswer, detectedLang);
+    emit('multilingual', 'Multilingual Layer', 'started', `Translating final safety advisory to regional language (${targetLang.toUpperCase()})...`);
+    const translatedAnswer = await translateFromEnglish(currentState.finalAnswer, targetLang);
     const tr1 = Date.now();
     currentState.finalAnswer = translatedAnswer;
-    emit('multilingual', 'Multilingual Layer', 'completed', 'Translated response back to user language.', tr1 - tr0);
+    emit('multilingual', 'Multilingual Layer', 'completed', `Translated response into ${targetLang.toUpperCase()}.`, tr1 - tr0);
   }
 
   const totalMs = Date.now() - overallStart;

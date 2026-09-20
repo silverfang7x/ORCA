@@ -12,6 +12,17 @@ const GROQ_MODELS = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'];
  */
 export async function synthesizerAgent(state: AgentState): Promise<Partial<AgentState>> {
   const sources: string[] = [];
+  const query = state.translatedQuery || state.userQuery || '';
+  const intent = state.intent || { needsWeather: true, needsHazard: true };
+
+  // 1. Handle off-topic or greeting queries directly without forcing ocean telemetry
+  if (intent.isOffTopic) {
+    const responseText = generateOffTopicResponse(query);
+    return {
+      finalAnswer: responseText,
+      sources: ['ORCA Assistant']
+    };
+  }
 
   if (state.weatherData?.source) {
     sources.push(state.weatherData.source);
@@ -20,18 +31,9 @@ export async function synthesizerAgent(state: AgentState): Promise<Partial<Agent
     sources.push(state.hazardData.source);
   }
 
-  // Handle edge case where both weatherData and hazardData are undefined
-  if (!state.weatherData && !state.hazardData) {
-    return {
-      finalAnswer: "VERDICT: UNABLE TO VERIFY\n\nI wasn't able to retrieve ocean telemetry or hazard data for this location right now. Please check back shortly before departing.",
-      sources: []
-    };
-  }
-
-  const query = state.translatedQuery || state.userQuery || 'Is it safe to fish?';
   const apiKey = process.env.GROQ_API_KEY;
 
-  if (!apiKey || apiKey.trim() === '' || apiKey === 'your_groq_api_key_here') {
+  if (!apiKey || apiKey.trim() === '' || apiKey.includes('your_groq_api_key')) {
     return {
       finalAnswer: generateFallbackAnswer(state, query, sources),
       sources
@@ -43,30 +45,23 @@ export async function synthesizerAgent(state: AgentState): Promise<Partial<Agent
 
     const promptData = {
       userQuery: query,
+      intentClassification: intent,
       weatherOceanData: state.weatherData || 'Not requested or unavailable',
       hazardGeofenceData: state.hazardData || 'Not requested or unavailable'
     };
 
     const systemPrompt = `You are the Synthesizer Agent for ORCA (sponsored by ISRO), a specialized AI advisory system for fishermen and coastal authorities.
-Your task is to synthesize ocean weather telemetry and hazard geofencing data into a comprehensive, plain-language advisory for fishermen.
+Your task is to synthesize ocean weather telemetry and hazard geofencing data into a direct, helpful, plain-language advisory for fishermen that DIRECTLY ANSWERS their specific question.
 
-MANDATORY RESPONSE STRUCTURE (Do NOT output a single-line answer!):
-
-1. CLEAR SAFETY VERDICT: Start with a bold, unambiguous safety verdict line:
-   - "**VERDICT: SAFE TO FISH**" or "**VERDICT: CAUTION ADVISED**" or "**VERDICT: UNSAFE / RESTRICTED ZONE**"
-
-2. SPECIFIC TELEMETRY NUMBERS: Provide exact numeric readings directly from the data:
-   - Wave Height (in meters)
-   - Wind Speed (in km/h)
-   - Sea Surface Temperature (in °C)
-   - Tide Forecast (list high and low tide times)
-   - Nearest Hazard Boundary & Distance (state nearest boundary name and distance/status)
-
-3. PRACTICAL RECOMMENDATION: Give 1-2 practical, actionable recommendations for fishermen (e.g. best departure window based on low tide, safety gear check, or safe offshore distance).
-
-4. DATA CITATIONS: Cite the data source for every claim (e.g. "[Source: Open-Meteo Marine API]", "[Source: Mock hazard dataset + Turf.js geofencing]").
-
-Tone: Clear, friendly, informative, and authoritative. Provide full details in markdown bullet points.`;
+INSTRUCTIONS:
+1. Directly answer the user's specific question: "${query}".
+2. If the user asks about CYCLONES, prioritize storm surge, cyclone warnings, wind speeds, and safety alerts.
+3. If the user asks about FISHING SAFETY, structure the response clearly:
+   - **VERDICT**: **SAFE TO FISH**, **CAUTION ADVISED**, or **UNSAFE / RESTRICTED ZONE**
+   - **TELEMETRY NUMBERS**: Include exact wave height, wind speed, sea temperature, and tide times from data.
+   - **PRACTICAL RECOMMENDATIONS**: Give 1-2 actionable tips for fishermen.
+   - **DATA CITATIONS**: Cite data sources (e.g., [Source: Open-Meteo Marine API]).
+4. Keep the tone helpful, clear, authoritative, and tailored to the query.`;
 
     const userMessage = `User Query: "${query}"
 
@@ -92,11 +87,10 @@ ${JSON.stringify(promptData, null, 2)}`;
 
         responseContent = response.choices[0]?.message?.content?.trim() || '';
         if (responseContent) {
-          console.error(`[PERF TIMING] Synthesizer Groq call (${modelName}): ${Date.now() - synthStart}ms`);
+          console.log(`[PERF TIMING] Synthesizer Groq call (${modelName}): ${Date.now() - synthStart}ms`);
           break;
         }
-      } catch (err) {
-        console.error(`[PERF TIMING ERROR] Synthesizer Groq model ${modelName} failed after ${Date.now() - synthStart}ms`);
+      } catch {
         continue;
       }
     }
@@ -116,27 +110,91 @@ ${JSON.stringify(promptData, null, 2)}`;
   }
 }
 
+function generateOffTopicResponse(query: string): string {
+  const q = query.toLowerCase().trim();
+  if (['hello', 'hi', 'hey', 'namaste', 'good morning', 'good afternoon', 'good evening'].some(g => q === g || q.startsWith(g))) {
+    return `Namaste! I am ORCA, your ocean safety assistant (sponsored by ISRO).
+
+I can help you with:
+- **Marine Weather & Ocean Forecasts**: Wave height, wind speeds, sea surface temperature, and tide cycles.
+- **Safety Advisories**: Sector-by-sector fishing safety verdicts.
+- **Hazard & Geofencing**: Restricted boundary alerts and cyclone risk warnings.
+
+How can I assist you with coastal weather or fishing safety today?`;
+  }
+
+  if (['who are you', 'what is your name', 'what do you do'].some(w => q.includes(w))) {
+    return `I am **ORCA** (Ocean Risk & Coastal Advisory), a multi-agent AI system designed for fishermen and coastal authorities (sponsored by ISRO).
+
+I analyze real-time satellite ocean telemetry, meteorological forecasts, and spatial geofencing data to provide instant, explainable marine advisories in local coastal languages.`;
+  }
+
+  return `I am ORCA, a specialized marine safety and ocean intelligence assistant for fishermen and coastal authorities.
+
+I can provide real-time advisories on wave heights, wind speeds, tide schedules, cyclone risks, and restricted maritime zones. Please ask me a question related to ocean conditions or fishing safety!`;
+}
+
 function generateFallbackAnswer(state: AgentState, query: string, sources: string[]): string {
-  const parts: string[] = [];
+  const intent = state.intent || {};
+
+  // If query was classified as off-topic or greeting
+  if (intent.isOffTopic) {
+    return generateOffTopicResponse(query);
+  }
+
+  const isCyclone = intent.isCycloneQuery || query.toLowerCase().includes('cyclone') || query.toLowerCase().includes('storm');
   const isRestricted = state.hazardData?.isInRestrictedZone;
   const wave = state.weatherData?.waveHeightMeters || 1.0;
+  const wind = state.weatherData?.windSpeedKmh || 15;
+  const hazardAlerts = state.hazardData?.hazardAlerts || [];
+
+  const parts: string[] = [];
+
+  if (isCyclone) {
+    parts.push(`**CYCLONE & EXTREME WEATHER ADVISORY**\n`);
+    parts.push(`*Assessment for query: "${query}"*\n`);
+
+    if (hazardAlerts.length > 0 || wind > 30 || wave >= 2.5) {
+      parts.push(`**VERDICT: HIGH CYCLONE / STORM RISK — DO NOT VENTURE TO SEA**\n`);
+      parts.push(`- **Severe Weather Threat:** High swell waves and strong atmospheric turbulence detected.`);
+      parts.push(`- **Current Wind Speed:** ${wind} km/h [Source: ${state.weatherData?.source || 'Open-Meteo'}]`);
+      parts.push(`- **Wave Height:** ${wave}m [Source: ${state.weatherData?.source || 'Open-Meteo'}]`);
+      if (hazardAlerts.length > 0) {
+        parts.push(`- **Active Coastal Warnings:**`);
+        hazardAlerts.forEach(a => parts.push(`  * [${a.severity}] ${a.type}: ${a.description}`));
+      }
+      parts.push(`\n**Actionable Safety Guidance:**`);
+      parts.push(`- Suspend all coastal fishing operations immediately and secure vessels at port.`);
+      parts.push(`- Monitor emergency radio broadcasts and ISRO/INCOIS weather bulletins.`);
+    } else {
+      parts.push(`**VERDICT: NO ACTIVE CYCLONE WARNINGS IN THIS SECTOR**\n`);
+      parts.push(`- **Wind Speed:** ${wind} km/h (Moderate) [Source: ${state.weatherData?.source || 'Open-Meteo'}]`);
+      parts.push(`- **Wave Height:** ${wave}m (Normal) [Source: ${state.weatherData?.source || 'Open-Meteo'}]`);
+      parts.push(`- **Active Hazards:** No active storm surge or cyclone alerts detected in this sector.`);
+      parts.push(`\n**Recommendation:**`);
+      parts.push(`- Conditions are currently clear of major cyclonic activity. Maintain standard VHF radio monitoring while at sea.`);
+    }
+    return parts.join('\n');
+  }
 
   let verdict = '**VERDICT: SAFE TO FISH WITH CAUTION**';
   if (isRestricted) {
     verdict = '**VERDICT: UNSAFE / RESTRICTED MARITIME ZONE**';
-  } else if (wave >= 2.5) {
-    verdict = '**VERDICT: CAUTION ADVISED (HIGH SWELLS)**';
+  } else if (wave >= 2.5 || wind >= 35) {
+    verdict = '**VERDICT: CAUTION ADVISED (HIGH SWELLS / WINDS)**';
   }
 
+  const locName = state.weatherData?.locationName || 'Coastal Sector';
+
   parts.push(`${verdict}\n`);
-  parts.push(`*Advisory for query: "${query}"*\n`);
+  parts.push(`*Safety Advisory for ${locName} — Query: "${query}"*\n`);
 
   if (state.weatherData) {
     parts.push(`**Ocean Telemetry Readings:**`);
     parts.push(`- **Wave Height:** ${state.weatherData.waveHeightMeters}m [Source: ${state.weatherData.source}]`);
     parts.push(`- **Wind Speed:** ${state.weatherData.windSpeedKmh} km/h [Source: ${state.weatherData.source}]`);
     parts.push(`- **Sea Surface Temperature:** ${state.weatherData.seaSurfaceTempCelsius}°C [Source: ${state.weatherData.source}]`);
-    if (state.weatherData.tideTimes.length > 0) {
+    if (state.weatherData.tideTimes && state.weatherData.tideTimes.length > 0) {
       const tideStr = state.weatherData.tideTimes.map(t => `${t.type.toUpperCase()} tide at ${t.time}`).join(', ');
       parts.push(`- **Tide Cycle:** ${tideStr} [Source: ${state.weatherData.source}]`);
     }
@@ -148,9 +206,9 @@ function generateFallbackAnswer(state: AgentState, query: string, sources: strin
     if (state.hazardData.nearestBoundaryName) {
       parts.push(`- **Nearest Boundary:** ${state.hazardData.nearestBoundaryName} [Source: ${state.hazardData.source}]`);
     }
-    if (state.hazardData.hazardAlerts.length > 0) {
+    if (hazardAlerts.length > 0) {
       parts.push('- **Active Safety Warnings:**');
-      state.hazardData.hazardAlerts.forEach(a => parts.push(`  * [${a.severity}] ${a.type}: ${a.description}`));
+      hazardAlerts.forEach(a => parts.push(`  * [${a.severity}] ${a.type}: ${a.description}`));
     } else {
       parts.push('- **Active Safety Warnings:** None reported in this sector.');
     }

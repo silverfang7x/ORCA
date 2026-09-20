@@ -126,18 +126,17 @@ export async function getHazardGeofenceData(query: LocationQuery): Promise<Hazar
   }
 }
 
+import { extractLocationAndDateFromQuery } from './weatherOceanAgent';
+
 /**
  * LangGraph Agent node wrapper.
  */
 export async function hazardGeofenceAgent(state: AgentState): Promise<Partial<AgentState>> {
-  const queryLocation: LocationQuery = state.location || {
-    latitude: 9.9312,
-    longitude: 76.2673,
-    date: new Date().toISOString(),
-  };
+  const queryText = state.translatedQuery || state.userQuery || '';
+  const queryLocation = extractLocationAndDateFromQuery(queryText, state.location);
 
   const hazardStart = Date.now();
   const hazardData = await getHazardGeofenceData(queryLocation);
-  console.error(`[PERF TIMING] Hazard Geofence evaluation: ${Date.now() - hazardStart}ms`);
+  console.error(`[PERF TIMING] Hazard Geofence evaluation for ${queryLocation.locationName || 'location'}: ${Date.now() - hazardStart}ms`);
   return { hazardData };
 }

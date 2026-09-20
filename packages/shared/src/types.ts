@@ -9,6 +9,7 @@ export interface WeatherOceanData {
   seaSurfaceTempCelsius: number;
   windSpeedKmh: number;
   tideTimes: { time: string; type: "high" | "low" }[];
+  locationName?: string;
   source: string;
 }
 
@@ -46,10 +47,13 @@ export interface AgentState {
   userQuery: string;
   detectedLanguage: string;
   translatedQuery: string;
+  preferredLanguage?: string;
   location?: LocationQuery;
   intent: {
     needsWeather: boolean;
     needsHazard: boolean;
+    isOffTopic?: boolean;
+    isCycloneQuery?: boolean;
   };
   weatherData?: WeatherOceanData;
   hazardData?: HazardGeofenceData;
