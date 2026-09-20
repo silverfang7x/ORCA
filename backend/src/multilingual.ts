@@ -51,19 +51,19 @@ export async function translateToEnglish(text: string, sourceLang: string): Prom
   const lang = (sourceLang || 'en').toLowerCase();
   if (lang === 'en' || lang.startsWith('en-')) return text;
 
-  console.log(`[Multilingual] translateToEnglish requested: "${text.slice(0, 40)}..." (sourceLang: ${lang})`);
+  console.error(`[Multilingual] translateToEnglish requested: "${text.slice(0, 40)}..." (sourceLang: ${lang})`);
 
   try {
     const bhashiniResult = await callBhashiniTwoStep(text, lang, 'en');
     if (bhashiniResult) {
-      console.log(`[Multilingual] Bhashini translation to English success: "${bhashiniResult.slice(0, 40)}..."`);
+      console.error(`[Multilingual SUCCESS] Bhashini translation to English succeeded: "${bhashiniResult.slice(0, 40)}..."`);
       return bhashiniResult;
     }
   } catch (err: any) {
-    console.error('[Multilingual ERROR] Bhashini translateToEnglish flow failed:', err?.message || err);
+    console.error('[Multilingual ERROR] Bhashini translateToEnglish flow failed:', err?.stack || err?.message || err);
   }
 
-  console.log('[Multilingual] Invoking fallback engine for translateToEnglish...');
+  console.error('[Multilingual Fallback] Invoking fallback engine for translateToEnglish...');
   return await translateWithFallback(text, lang, 'en');
 }
 
@@ -76,19 +76,19 @@ export async function translateFromEnglish(text: string, targetLang: string): Pr
   const lang = (targetLang || 'en').toLowerCase();
   if (lang === 'en' || lang.startsWith('en-')) return text;
 
-  console.log(`[Multilingual] translateFromEnglish requested: "${text.slice(0, 40)}..." (targetLang: ${lang})`);
+  console.error(`[Multilingual] translateFromEnglish requested: "${text.slice(0, 40)}..." (targetLang: ${lang})`);
 
   try {
     const bhashiniResult = await callBhashiniTwoStep(text, 'en', lang);
     if (bhashiniResult) {
-      console.log(`[Multilingual] Bhashini translation from English success: "${bhashiniResult.slice(0, 40)}..."`);
+      console.error(`[Multilingual SUCCESS] Bhashini translation from English succeeded: "${bhashiniResult.slice(0, 40)}..."`);
       return bhashiniResult;
     }
   } catch (err: any) {
-    console.error('[Multilingual ERROR] Bhashini translateFromEnglish flow failed:', err?.message || err);
+    console.error('[Multilingual ERROR] Bhashini translateFromEnglish flow failed:', err?.stack || err?.message || err);
   }
 
-  console.log('[Multilingual] Invoking fallback engine for translateFromEnglish...');
+  console.error('[Multilingual Fallback] Invoking fallback engine for translateFromEnglish...');
   return await translateWithFallback(text, 'en', lang);
 }
 
@@ -105,18 +105,19 @@ async function callBhashiniTwoStep(
   const userId = process.env.BHASHINI_USER_ID;
   const apiKey = process.env.BHASHINI_ULCA_API_KEY;
 
-  console.error(`[Bhashini Step 0] Checking Credentials: BHASHINI_USER_ID=${userId ? 'PRESENT (' + userId.slice(0, 8) + '...)' : 'MISSING'}, BHASHINI_ULCA_API_KEY=${apiKey ? 'PRESENT' : 'MISSING'}`);
+  console.error(`[Bhashini Step 0 Credentials Check] BHASHINI_USER_ID=${userId ? 'PRESENT (' + userId.slice(0, 6) + '...)' : 'MISSING'}, BHASHINI_ULCA_API_KEY=${apiKey ? 'PRESENT (' + apiKey.slice(0, 6) + '...)' : 'MISSING'}`);
 
   if (!userId || !apiKey || userId.includes('your_') || apiKey.includes('your_')) {
-    console.error('[Bhashini Step 0 ERROR] Environment variables BHASHINI_USER_ID or BHASHINI_ULCA_API_KEY are missing or set to placeholder!');
-    throw new Error('Bhashini credentials (BHASHINI_USER_ID, BHASHINI_ULCA_API_KEY) not configured in environment');
+    const err = new Error('Bhashini credentials (BHASHINI_USER_ID, BHASHINI_ULCA_API_KEY) missing or set to placeholder in environment');
+    console.error('[Bhashini Step 0 ERROR]:', err);
+    throw err;
   }
 
   const cacheKey = `${sourceLang}-${targetLang}`;
   let config = pipelineConfigCache.get(cacheKey);
 
   if (!config) {
-    console.error(`[Bhashini Step 1] Fetching pipeline config for pair ${cacheKey}...`);
+    console.error(`[Bhashini Step 1 Config Call START] Requesting pipeline config for pair ${cacheKey}...`);
     const pipelineUrl = 'https://meity-auth.ulcacontrib.org/ulca/apis/v0/model/getModelsPipeline';
     const payload = {
       pipelineTasks: [
@@ -150,16 +151,16 @@ async function callBhashiniTwoStep(
         body: JSON.stringify(payload),
         signal: configController.signal
       });
-      console.error(`[PERF TIMING] Bhashini getModelsPipeline config call: ${Date.now() - configStart}ms (HTTP Status: ${response.status})`);
+      console.error(`[Bhashini Step 1 Config Response] HTTP Status: ${response.status} (Duration: ${Date.now() - configStart}ms)`);
     } catch (fetchErr: any) {
-      console.error(`[PERF TIMING ERROR] Bhashini getModelsPipeline exception after ${Date.now() - configStart}ms: ${fetchErr?.message || fetchErr}`);
+      console.error(`[Bhashini Step 1 Config EXCEPTION] Duration: ${Date.now() - configStart}ms, Error:`, fetchErr?.stack || fetchErr);
       throw fetchErr;
     } finally {
       clearTimeout(configTimer);
     }
 
     if (!response.ok) {
-      console.error(`[Bhashini Step 1 Retry] Retrying getModelsPipeline with ulcaApiKey header...`);
+      console.error(`[Bhashini Step 1 Config RETRY] HTTP ${response.status} received. Retrying getModelsPipeline with ulcaApiKey header...`);
       const retryStart = Date.now();
       const retryController = new AbortController();
       const retryTimer = setTimeout(() => retryController.abort(), 5000);
@@ -174,9 +175,9 @@ async function callBhashiniTwoStep(
           body: JSON.stringify(payload),
           signal: retryController.signal
         });
-        console.error(`[PERF TIMING] Bhashini getModelsPipeline retry call: ${Date.now() - retryStart}ms (HTTP Status: ${response.status})`);
+        console.error(`[Bhashini Step 1 Config Retry Response] HTTP Status: ${response.status} (Duration: ${Date.now() - retryStart}ms)`);
       } catch (retryErr: any) {
-        console.error(`[PERF TIMING ERROR] Bhashini getModelsPipeline retry exception after ${Date.now() - retryStart}ms: ${retryErr?.message || retryErr}`);
+        console.error(`[Bhashini Step 1 Config Retry EXCEPTION] Duration: ${Date.now() - retryStart}ms, Error:`, retryErr?.stack || retryErr);
         throw retryErr;
       } finally {
         clearTimeout(retryTimer);
@@ -185,31 +186,39 @@ async function callBhashiniTwoStep(
 
     if (!response.ok) {
       const errText = await response.text();
-      console.error(`[Bhashini Step 1 ERROR] getModelsPipeline failed with HTTP ${response.status}: ${errText}`);
-      throw new Error(`Bhashini getModelsPipeline failed with HTTP ${response.status}: ${errText}`);
+      const configErr = new Error(`Bhashini getModelsPipeline failed with HTTP ${response.status}: ${errText}`);
+      console.error('[Bhashini Step 1 Config FAILURE]:', configErr);
+      throw configErr;
     }
 
     const data: any = await response.json();
-    console.error(`[Bhashini Step 1 Success] Config response parsed. Keys:`, Object.keys(data));
+    console.error(`[Bhashini Step 1 Config SUCCESS] Response keys:`, Object.keys(data));
 
+    // Key Extraction Step
+    console.error(`[Bhashini Key Extraction START] Extracting endpoint & auth key...`);
     const extractedEndpoint = data?.pipelineInferenceAPIEndPoint;
     const extractedConfig = data?.pipelineResponseConfig?.[0]?.config?.[0];
 
+    const callbackUrl = extractedEndpoint?.callbackUrl || 'https://dhruva-api.bhashini.gov.in/services/inference/pipeline';
+    const headerName = extractedEndpoint?.inferenceApiKey?.name || 'Authorization';
+    const headerValue = extractedEndpoint?.inferenceApiKey?.value || apiKey;
+    const serviceId = extractedConfig?.serviceId || 'ai4bharat/indictrans-v2-all-gpu--t4';
+
     config = {
-      callbackUrl: extractedEndpoint?.callbackUrl || 'https://dhruva-api.bhashini.gov.in/services/inference/pipeline',
-      headerName: extractedEndpoint?.inferenceApiKey?.name || 'Authorization',
-      headerValue: extractedEndpoint?.inferenceApiKey?.value || apiKey,
-      serviceId: extractedConfig?.serviceId || 'ai4bharat/indictrans-v2-all-gpu--t4'
+      callbackUrl,
+      headerName,
+      headerValue,
+      serviceId
     };
 
-    console.error(`[Bhashini Step 1 Extracted Key & Service]: callbackUrl=${config.callbackUrl}, headerName=${config.headerName}, serviceId=${config.serviceId}`);
+    console.error(`[Bhashini Key Extraction SUCCESS] callbackUrl=${config.callbackUrl}, headerName=${config.headerName}, headerValue=${config.headerValue ? 'PRESENT' : 'MISSING'}, serviceId=${config.serviceId}`);
     pipelineConfigCache.set(cacheKey, config);
   } else {
-    console.error(`[Bhashini Step 1] Using cached pipeline config for ${cacheKey}`);
+    console.error(`[Bhashini Step 1 Config] Using in-memory cached config for ${cacheKey}`);
   }
 
   // Step 2: Compute Inference call
-  console.error(`[Bhashini Step 2] Executing inference POST call to ${config.callbackUrl} for serviceId ${config.serviceId}...`);
+  console.error(`[Bhashini Step 2 Translate Call START] Sending POST inference call to ${config.callbackUrl} for serviceId ${config.serviceId}...`);
   let computeRes: Response;
   const computeStart = Date.now();
   const computeController = new AbortController();
@@ -240,9 +249,9 @@ async function callBhashiniTwoStep(
       }),
       signal: computeController.signal
     });
-    console.error(`[PERF TIMING] Bhashini translate inference call: ${Date.now() - computeStart}ms (HTTP Status: ${computeRes.status})`);
+    console.error(`[Bhashini Step 2 Translate Response] HTTP Status: ${computeRes.status} (Duration: ${Date.now() - computeStart}ms)`);
   } catch (compErr: any) {
-    console.error(`[PERF TIMING ERROR] Bhashini translate inference exception after ${Date.now() - computeStart}ms: ${compErr?.message || compErr}`);
+    console.error(`[Bhashini Step 2 Translate EXCEPTION] Duration: ${Date.now() - computeStart}ms, Error:`, compErr?.stack || compErr);
     throw compErr;
   } finally {
     clearTimeout(computeTimer);
@@ -250,18 +259,20 @@ async function callBhashiniTwoStep(
 
   if (!computeRes.ok) {
     const compErrText = await computeRes.text();
-    console.error(`[Bhashini Step 2 ERROR] Inference compute failed with HTTP ${computeRes.status}: ${compErrText}`);
-    throw new Error(`Bhashini inference failed with HTTP status ${computeRes.status}: ${compErrText}`);
+    const translateErr = new Error(`Bhashini inference failed with HTTP status ${computeRes.status}: ${compErrText}`);
+    console.error('[Bhashini Step 2 Translate FAILURE]:', translateErr);
+    throw translateErr;
   }
 
   const computeData: any = await computeRes.json();
   const outputText = computeData?.pipelineResponse?.[0]?.output?.[0]?.target;
   if (!outputText) {
-    console.error('[Bhashini Step 2 ERROR] Response JSON did not contain output target:', JSON.stringify(computeData));
-    throw new Error('Bhashini inference response missing output target text');
+    const missingOutputErr = new Error(`Bhashini inference response missing output target text. Raw data: ${JSON.stringify(computeData)}`);
+    console.error('[Bhashini Step 2 Translate FAILURE]:', missingOutputErr);
+    throw missingOutputErr;
   }
 
-  console.error(`[Bhashini Step 2 Success] Received output target: "${outputText.slice(0, 40)}..."`);
+  console.error(`[Bhashini Step 2 Translate SUCCESS] Translated output target: "${outputText.slice(0, 40)}..."`);
   return outputText;
 }
 
