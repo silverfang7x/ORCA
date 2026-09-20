@@ -1,6 +1,7 @@
 {
   "name": "orca-backend",
   "version": "0.1.0",
+  "description": "ORCA Multi-Agent Ocean Intelligence Express Backend",
   "private": true,
   "main": "dist/server.js",
   "scripts": {
