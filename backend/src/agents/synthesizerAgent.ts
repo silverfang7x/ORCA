@@ -47,26 +47,28 @@ export async function synthesizerAgent(state: AgentState): Promise<Partial<Agent
       hazardGeofenceData: state.hazardData || 'Not requested or unavailable'
     };
 
-    const systemPrompt = `You are the Synthesizer Agent for ORCA (sponsored by ISRO), a specialized AI advisory system for fishermen and coastal authorities.
-Your task is to synthesize ocean weather telemetry and hazard geofencing data into a comprehensive, plain-language advisory for fishermen.
+    const systemPrompt = `You are the Synthesizer Agent for ORCA (sponsored by ISRO), a specialized AI advisory system for fishermen, coastal citizens, swimmers, and maritime authorities.
+Your task is to synthesize ocean weather telemetry and hazard spatial data into a clear, structured, genuinely informative safety advisory tailored specifically to the user's requested activity (e.g., swimming, fishing, beach activities, boating, or general ocean safety).
 
-MANDATORY RESPONSE STRUCTURE (Do NOT output a single-line answer!):
+MANDATORY RESPONSE GUIDELINES:
 
-1. CLEAR SAFETY VERDICT: Start with a bold, unambiguous safety verdict line:
-   - "**VERDICT: SAFE TO FISH**" or "**VERDICT: CAUTION ADVISED**" or "**VERDICT: UNSAFE / RESTRICTED ZONE**"
+1. DYNAMIC SAFETY VERDICT: Start with a bold, unambiguous safety verdict line matching the requested activity:
+   - For Fishing/Sailing: "**VERDICT: SAFE TO FISH / SAIL**" or "**VERDICT: CAUTION ADVISED**" or "**VERDICT: UNSAFE / RESTRICTED ZONE**"
+   - For Swimming/Beach: "**VERDICT: SAFE FOR SWIMMING**" or "**VERDICT: CAUTION ADVISED FOR SWIMMERS**" or "**VERDICT: UNSAFE FOR SWIMMING (HIGH SWELLS / RIPTIDES)**"
+   - For Out-of-Scope Queries (unrelated to ocean/marine): Plainly state that ORCA is a coastal & marine safety platform and provide a brief friendly redirection.
 
-2. SPECIFIC TELEMETRY NUMBERS: Provide exact numeric readings directly from the data:
+2. SPECIFIC TELEMETRY NUMBERS: Always include exact numeric readings directly from the data:
    - Wave Height (in meters)
    - Wind Speed (in km/h)
    - Sea Surface Temperature (in °C)
-   - Tide Forecast (list high and low tide times)
-   - Nearest Hazard Boundary & Distance (state nearest boundary name and distance/status)
+   - Tide Forecast (high and low tide times)
+   - Nearest Hazard Boundary & Distance
 
-3. PRACTICAL RECOMMENDATION: Give 1-2 practical, actionable recommendations for fishermen (e.g. best departure window based on low tide, safety gear check, or safe offshore distance).
+3. TAILORED PRACTICAL RECOMMENDATION: Give 1-2 practical recommendations matching the specific question (e.g., for swimming: wave height threshold advice, shore proximity, low tide currents; for fishing: low tide departure windows, life jackets).
 
 4. DATA CITATIONS: Cite the data source for every claim (e.g. "[Source: Open-Meteo Marine API]", "[Source: Mock hazard dataset + Turf.js geofencing]").
 
-Tone: Clear, friendly, informative, and authoritative. Provide full details in markdown bullet points.`;
+Tone: Clear, friendly, informative, and authoritative. Answer the specific question asked directly.`;
 
     const userMessage = `User Query: "${query}"
 
@@ -118,14 +120,28 @@ ${JSON.stringify(promptData, null, 2)}`;
 
 function generateFallbackAnswer(state: AgentState, query: string, sources: string[]): string {
   const parts: string[] = [];
+  const lowerQuery = query.toLowerCase();
+  const isSwimmingQuery = lowerQuery.includes('swim') || lowerQuery.includes('bath') || lowerQuery.includes('beach');
   const isRestricted = state.hazardData?.isInRestrictedZone;
   const wave = state.weatherData?.waveHeightMeters || 1.0;
 
-  let verdict = '**VERDICT: SAFE TO FISH WITH CAUTION**';
-  if (isRestricted) {
-    verdict = '**VERDICT: UNSAFE / RESTRICTED MARITIME ZONE**';
-  } else if (wave >= 2.5) {
-    verdict = '**VERDICT: CAUTION ADVISED (HIGH SWELLS)**';
+  let verdict = '';
+  if (isSwimmingQuery) {
+    if (isRestricted || wave >= 2.0) {
+      verdict = '**VERDICT: UNSAFE FOR SWIMMING (HIGH SWELLS / HAZARD ZONE)**';
+    } else if (wave >= 1.5) {
+      verdict = '**VERDICT: CAUTION ADVISED FOR SWIMMING**';
+    } else {
+      verdict = '**VERDICT: SAFE FOR SWIMMING WITH CAUTION**';
+    }
+  } else {
+    if (isRestricted) {
+      verdict = '**VERDICT: UNSAFE / RESTRICTED MARITIME ZONE**';
+    } else if (wave >= 2.5) {
+      verdict = '**VERDICT: CAUTION ADVISED (HIGH SWELLS)**';
+    } else {
+      verdict = '**VERDICT: SAFE TO FISH WITH CAUTION**';
+    }
   }
 
   parts.push(`${verdict}\n`);
@@ -157,12 +173,20 @@ function generateFallbackAnswer(state: AgentState, query: string, sources: strin
   }
 
   parts.push(`\n**Practical Safety Recommendation:**`);
-  if (isRestricted) {
-    parts.push(`- Do NOT enter this sector. Alter heading immediately to remain outside restricted maritime boundaries.`);
-  } else if (wave >= 2.0) {
-    parts.push(`- Exercise heightened caution. Ensure life jackets are worn by all crew members and monitor low-tide windows for safer harbor return.`);
+  if (isSwimmingQuery) {
+    if (wave >= 1.5 || isRestricted) {
+      parts.push(`- Avoid entering deep waters. Strong wave swells (${wave}m) and tidal currents pose a drowning risk.`);
+    } else {
+      parts.push(`- Swimming is permitted near designated shallow beach zones. Remain within guarded areas and monitor changing tide currents.`);
+    }
   } else {
-    parts.push(`- Conditions are safe for routine fishing. Depart during early low-tide windows and maintain active VHF radio watch.`);
+    if (isRestricted) {
+      parts.push(`- Do NOT enter this sector. Alter heading immediately to remain outside restricted maritime boundaries.`);
+    } else if (wave >= 2.0) {
+      parts.push(`- Exercise heightened caution. Ensure life jackets are worn by all crew members and monitor low-tide windows for safer harbor return.`);
+    } else {
+      parts.push(`- Conditions are safe for routine fishing. Depart during early low-tide windows and maintain active VHF radio watch.`);
+    }
   }
 
   return parts.join('\n');
