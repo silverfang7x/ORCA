@@ -97,8 +97,14 @@ ${JSON.stringify(promptData, null, 2)}`;
           console.error(`[PERF TIMING] Synthesizer Groq call (${modelName}): ${Date.now() - synthStart}ms`);
           break;
         }
-      } catch (err) {
-        console.error(`[PERF TIMING ERROR] Synthesizer Groq model ${modelName} failed after ${Date.now() - synthStart}ms`);
+      } catch (err: any) {
+        console.error(`[GROQ ERROR - SynthesizerAgent] Model ${modelName} failed after ${Date.now() - synthStart}ms:`, JSON.stringify({
+          message: err?.message,
+          status: err?.status,
+          error: err?.error,
+          name: err?.name,
+          stack: err?.stack
+        }, null, 2));
         continue;
       }
     }
@@ -109,8 +115,14 @@ ${JSON.stringify(promptData, null, 2)}`;
       finalAnswer,
       sources
     };
-  } catch (error) {
-    console.error('[SynthesizerAgent] Error calling Groq API, using fallback:', error);
+  } catch (error: any) {
+    console.error('[GROQ ERROR - SynthesizerAgent EXCEPTION]:', JSON.stringify({
+      message: error?.message,
+      status: error?.status,
+      error: error?.error,
+      name: error?.name,
+      stack: error?.stack
+    }, null, 2));
     return {
       finalAnswer: generateFallbackAnswer(state, query, sources),
       sources

@@ -59,13 +59,20 @@ Classification Rules:
           console.log(`[PERF TIMING] Planner Agent Groq Call (${modelName}): ${Date.now() - tStart}ms`);
           break;
         }
-      } catch (err) {
+      } catch (err: any) {
+        console.error(`[GROQ ERROR - PlannerAgent] Model ${modelName} failed after ${Date.now() - tStart}ms:`, JSON.stringify({
+          message: err?.message,
+          status: err?.status,
+          error: err?.error,
+          name: err?.name,
+          stack: err?.stack
+        }, null, 2));
         continue;
       }
     }
 
     if (!content) {
-      console.log(`[PERF TIMING] Planner Agent Groq Call failed/exhausted: ${Date.now() - tStart}ms`);
+      console.error(`[GROQ ERROR - PlannerAgent ALL MODELS EXHAUSTED] Could not complete classification for query: "${query}"`);
       return { intent: DEFAULT_INTENT };
     }
 
@@ -79,8 +86,14 @@ Classification Rules:
         needsHazard
       }
     };
-  } catch (error) {
-    console.error('[PlannerAgent] Exception during intent classification, falling back to default:', error);
+  } catch (error: any) {
+    console.error('[GROQ ERROR - PlannerAgent EXCEPTION]:', JSON.stringify({
+      message: error?.message,
+      status: error?.status,
+      error: error?.error,
+      name: error?.name,
+      stack: error?.stack
+    }, null, 2));
     return { intent: DEFAULT_INTENT };
   }
 }

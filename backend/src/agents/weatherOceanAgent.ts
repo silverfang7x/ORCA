@@ -21,6 +21,15 @@ interface OpenMeteoForecastResponse {
   };
 }
 
+interface ForecastCacheEntry {
+  data: OpenMeteoForecastResponse;
+  timestamp: number;
+}
+
+// In-memory cache for Open-Meteo Forecast API responses (60 min TTL)
+const forecastCache = new Map<string, ForecastCacheEntry>();
+const FORECAST_CACHE_TTL_MS = 60 * 60 * 1000;
+
 const FALLBACK_WEATHER_DATA: WeatherOceanData = {
   waveHeightMeters: 1.0,
   seaSurfaceTempCelsius: 28,
@@ -153,51 +162,86 @@ export async function getWeatherOceanData(query: LocationQuery): Promise<Weather
   const startDateStr = getDateStringWithOffset(query.date, -1);
   const endDateStr = getDateStringWithOffset(query.date, 1);
 
+  const roundedLat = query.latitude.toFixed(1);
+  const roundedLong = query.longitude.toFixed(1);
+  const forecastCacheKey = `${roundedLat}_${roundedLong}_${targetDateStr}`;
+  const now = Date.now();
+  const cachedForecastEntry = forecastCache.get(forecastCacheKey);
+
   try {
     const marineUrl = `https://marine-api.open-meteo.com/v1/marine?latitude=${query.latitude}&longitude=${query.longitude}&hourly=wave_height,sea_surface_temperature,sea_level_height_msl&start_date=${startDateStr}&end_date=${endDateStr}`;
     const forecastUrl = `https://api.open-meteo.com/v1/forecast?latitude=${query.latitude}&longitude=${query.longitude}&hourly=wind_speed_10m&wind_speed_unit=kmh&start_date=${targetDateStr}&end_date=${targetDateStr}`;
 
     console.error(`[weatherOceanAgent FETCH] Requesting Marine URL: ${marineUrl}`);
-    console.error(`[weatherOceanAgent FETCH] Requesting Forecast URL: ${forecastUrl}`);
-
-    const tWeatherStart = Date.now();
-    const [marineResResult, forecastResResult] = await Promise.allSettled([
-      fetchWithTimeout(marineUrl, 5000),
-      fetchWithTimeout(forecastUrl, 5000),
-    ]);
-    console.error(`[PERF TIMING] Weather Agent Open-Meteo API Calls: ${Date.now() - tWeatherStart}ms`);
 
     let marineData: OpenMeteoMarineResponse | null = null;
     let forecastData: OpenMeteoForecastResponse | null = null;
-
     let marineErr: Error | null = null;
     let forecastErr: Error | null = null;
 
-    if (marineResResult.status === 'fulfilled' && marineResResult.value.ok) {
-      marineData = (await marineResResult.value.json()) as OpenMeteoMarineResponse;
-      console.error(`[weatherOceanAgent SUCCESS] Marine API returned ${marineData?.hourly?.time?.length || 0} hourly samples`);
-    } else {
-      if (marineResResult.status === 'rejected') {
-        marineErr = marineResResult.reason instanceof Error ? marineResResult.reason : new Error(String(marineResResult.reason));
-        console.error('[weatherOceanAgent ERROR] Marine API fetch rejected/timed out:', marineResResult.reason?.message || marineResResult.reason);
-      } else {
-        const bodyText = await marineResResult.value.text().catch(() => 'Unable to read body');
-        marineErr = new Error(`Marine API HTTP ${marineResResult.value.status} ${marineResResult.value.statusText}: ${bodyText}`);
-        console.error(`[weatherOceanAgent ERROR] Marine API returned HTTP ${marineResResult.value.status} ${marineResResult.value.statusText}: ${bodyText}`);
+    // Check Forecast Cache first
+    if (cachedForecastEntry && (now - cachedForecastEntry.timestamp) < FORECAST_CACHE_TTL_MS) {
+      forecastData = cachedForecastEntry.data;
+      console.error(`[weatherOceanAgent CACHE HIT] Using cached Open-Meteo Forecast data for key "${forecastCacheKey}" (Age: ${Math.round((now - cachedForecastEntry.timestamp) / 1000)}s)`);
+      
+      // Fetch only Marine API
+      const tMarineStart = Date.now();
+      try {
+        const marineRes = await fetchWithTimeout(marineUrl, 5000);
+        console.error(`[PERF TIMING] Weather Agent Marine API Call: ${Date.now() - tMarineStart}ms (Status: ${marineRes.status})`);
+        if (marineRes.ok) {
+          marineData = (await marineRes.json()) as OpenMeteoMarineResponse;
+          console.error(`[weatherOceanAgent SUCCESS] Marine API returned ${marineData?.hourly?.time?.length || 0} hourly samples`);
+        } else {
+          const bodyText = await marineRes.text().catch(() => 'Unable to read body');
+          marineErr = new Error(`Marine API HTTP ${marineRes.status} ${marineRes.statusText}: ${bodyText}`);
+          console.error(`[weatherOceanAgent ERROR] Marine API returned HTTP ${marineRes.status} ${marineRes.statusText}: ${bodyText}`);
+        }
+      } catch (mErr: any) {
+        marineErr = mErr instanceof Error ? mErr : new Error(String(mErr));
+        console.error('[weatherOceanAgent ERROR] Marine API fetch rejected/timed out:', mErr?.message || mErr);
       }
-    }
-
-    if (forecastResResult.status === 'fulfilled' && forecastResResult.value.ok) {
-      forecastData = (await forecastResResult.value.json()) as OpenMeteoForecastResponse;
-      console.error(`[weatherOceanAgent SUCCESS] Forecast API returned ${forecastData?.hourly?.time?.length || 0} hourly samples`);
     } else {
-      if (forecastResResult.status === 'rejected') {
-        forecastErr = forecastResResult.reason instanceof Error ? forecastResResult.reason : new Error(String(forecastResResult.reason));
-        console.error('[weatherOceanAgent ERROR] Forecast API fetch rejected/timed out:', forecastResResult.reason?.message || forecastResResult.reason);
+      console.error(`[weatherOceanAgent CACHE MISS] Fetching fresh Forecast API & Marine API for key "${forecastCacheKey}"...`);
+      console.error(`[weatherOceanAgent FETCH] Requesting Forecast URL: ${forecastUrl}`);
+
+      const tWeatherStart = Date.now();
+      const [marineResResult, forecastResResult] = await Promise.allSettled([
+        fetchWithTimeout(marineUrl, 5000),
+        fetchWithTimeout(forecastUrl, 5000),
+      ]);
+      console.error(`[PERF TIMING] Weather Agent Dual Open-Meteo Calls: ${Date.now() - tWeatherStart}ms`);
+
+      if (marineResResult.status === 'fulfilled' && marineResResult.value.ok) {
+        marineData = (await marineResResult.value.json()) as OpenMeteoMarineResponse;
+        console.error(`[weatherOceanAgent SUCCESS] Marine API returned ${marineData?.hourly?.time?.length || 0} hourly samples`);
       } else {
-        const bodyText = await forecastResResult.value.text().catch(() => 'Unable to read body');
-        forecastErr = new Error(`Forecast API HTTP ${forecastResResult.value.status} ${forecastResResult.value.statusText}: ${bodyText}`);
-        console.error(`[weatherOceanAgent ERROR] Forecast API returned HTTP ${forecastResResult.value.status} ${forecastResResult.value.statusText}: ${bodyText}`);
+        if (marineResResult.status === 'rejected') {
+          marineErr = marineResResult.reason instanceof Error ? marineResResult.reason : new Error(String(marineResResult.reason));
+          console.error('[weatherOceanAgent ERROR] Marine API fetch rejected/timed out:', marineResResult.reason?.message || marineResResult.reason);
+        } else {
+          const bodyText = await marineResResult.value.text().catch(() => 'Unable to read body');
+          marineErr = new Error(`Marine API HTTP ${marineResResult.value.status} ${marineResResult.value.statusText}: ${bodyText}`);
+          console.error(`[weatherOceanAgent ERROR] Marine API returned HTTP ${marineResResult.value.status} ${marineResResult.value.statusText}: ${bodyText}`);
+        }
+      }
+
+      if (forecastResResult.status === 'fulfilled' && forecastResResult.value.ok) {
+        forecastData = (await forecastResResult.value.json()) as OpenMeteoForecastResponse;
+        console.error(`[weatherOceanAgent SUCCESS] Forecast API returned ${forecastData?.hourly?.time?.length || 0} hourly samples`);
+        if (forecastData?.hourly) {
+          forecastCache.set(forecastCacheKey, { data: forecastData, timestamp: Date.now() });
+          console.error(`[weatherOceanAgent CACHE STORED] Saved Forecast data for key "${forecastCacheKey}"`);
+        }
+      } else {
+        if (forecastResResult.status === 'rejected') {
+          forecastErr = forecastResResult.reason instanceof Error ? forecastResResult.reason : new Error(String(forecastResResult.reason));
+          console.error('[weatherOceanAgent ERROR] Forecast API fetch rejected/timed out:', forecastResResult.reason?.message || forecastResResult.reason);
+        } else {
+          const bodyText = await forecastResResult.value.text().catch(() => 'Unable to read body');
+          forecastErr = new Error(`Forecast API HTTP ${forecastResResult.value.status} ${forecastResResult.value.statusText}: ${bodyText}`);
+          console.error(`[weatherOceanAgent ERROR] Forecast API returned HTTP ${forecastResResult.value.status} ${forecastResResult.value.statusText}: ${bodyText}`);
+        }
       }
     }
 
