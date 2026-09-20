@@ -43,6 +43,7 @@ export default function AgentActivityPage() {
     setErrorMsg(null);
 
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+    const preferredLanguage = (typeof window !== "undefined" && localStorage.getItem("orca_language_preference")) || "en";
 
     try {
       const response = await fetch(`${apiUrl}/api/query/stream`, {
@@ -53,6 +54,7 @@ export default function AgentActivityPage() {
         body: JSON.stringify({
           userQuery: selectedQuery,
           location: DEFAULT_KOCHI_LOCATION,
+          preferredLanguage,
         }),
       });
 

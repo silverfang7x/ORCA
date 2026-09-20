@@ -67,16 +67,17 @@ app.get('/health', (req: Request, res: Response) => {
  */
 app.post('/api/query', async (req: Request, res: Response) => {
   try {
-    const { userQuery, location } = req.body as {
+    const { userQuery, location, preferredLanguage } = req.body as {
       userQuery: string;
       location?: LocationQuery;
+      preferredLanguage?: string;
     };
 
     if (!userQuery || typeof userQuery !== 'string' || !userQuery.trim()) {
       return res.status(400).json({ error: 'userQuery is required and must be a non-empty string.' });
     }
 
-    const resultState = await runOrcaGraph(userQuery, location);
+    const resultState = await runOrcaGraph(userQuery, location, undefined, preferredLanguage);
 
     queryHistoryStore.push({
       id: `HIS-${Date.now()}`,
@@ -109,9 +110,10 @@ app.post('/api/query/stream', async (req: Request, res: Response) => {
   res.flushHeaders?.();
 
   try {
-    const { userQuery, location } = req.body as {
+    const { userQuery, location, preferredLanguage } = req.body as {
       userQuery: string;
       location?: LocationQuery;
+      preferredLanguage?: string;
     };
 
     if (!userQuery || typeof userQuery !== 'string' || !userQuery.trim()) {
@@ -119,9 +121,14 @@ app.post('/api/query/stream', async (req: Request, res: Response) => {
       return res.end();
     }
 
-    const finalState = await runOrcaGraph(userQuery, location, (event: AgentProgressEvent) => {
-      res.write(`event: progress\ndata: ${JSON.stringify(event)}\n\n`);
-    });
+    const finalState = await runOrcaGraph(
+      userQuery,
+      location,
+      (event: AgentProgressEvent) => {
+        res.write(`event: progress\ndata: ${JSON.stringify(event)}\n\n`);
+      },
+      preferredLanguage
+    );
 
     queryHistoryStore.push({
       id: `HIS-${Date.now()}`,

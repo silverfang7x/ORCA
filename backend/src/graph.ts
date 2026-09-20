@@ -98,7 +98,8 @@ export const orcaGraph = builder.compile();
 export async function runOrcaGraph(
   userQuery: string,
   location?: LocationQuery,
-  onProgress?: ProgressCallback
+  onProgress?: ProgressCallback,
+  preferredLanguage?: string
 ): Promise<AgentState> {
   const emit = (
     agent: AgentProgressEvent['agent'],
@@ -217,13 +218,18 @@ export async function runOrcaGraph(
   currentState = { ...currentState, ...synthRes };
 
   // 5. Final Answer Regional Translation if required
-  if (detectedLang !== 'en' && currentState.finalAnswer) {
+  const targetLang = (preferredLanguage && preferredLanguage !== 'en')
+    ? preferredLanguage.toLowerCase()
+    : (detectedLang !== 'en' ? detectedLang.toLowerCase() : 'en');
+
+  if (targetLang !== 'en' && currentState.finalAnswer) {
     const tr0 = Date.now();
-    emit('multilingual', 'Multilingual Layer', 'started', `Translating final safety advisory back to regional language (${detectedLang.toUpperCase()})...`);
-    const translatedAnswer = await translateFromEnglish(currentState.finalAnswer, detectedLang);
+    console.error(`[Multilingual Output] Translating final safety advisory to target language: ${targetLang.toUpperCase()} (preferredLanguage=${preferredLanguage}, detectedLang=${detectedLang})`);
+    emit('multilingual', 'Multilingual Layer', 'started', `Translating final safety advisory to regional language (${targetLang.toUpperCase()})...`);
+    const translatedAnswer = await translateFromEnglish(currentState.finalAnswer, targetLang);
     const tr1 = Date.now();
     currentState.finalAnswer = translatedAnswer;
-    emit('multilingual', 'Multilingual Layer', 'completed', 'Translated response back to user language.', tr1 - tr0);
+    emit('multilingual', 'Multilingual Layer', 'completed', `Translated response to ${targetLang.toUpperCase()}.`, tr1 - tr0);
   }
 
   const totalMs = Date.now() - overallStart;

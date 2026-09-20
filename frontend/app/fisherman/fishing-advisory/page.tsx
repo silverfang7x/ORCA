@@ -73,12 +73,14 @@ export default function FishingAdvisoryPage() {
 
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+      const preferredLanguage = (typeof window !== "undefined" && localStorage.getItem("orca_language_preference")) || "en";
       const res = await fetch(`${apiUrl}/api/query`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           userQuery: "Is it safe to fish here today?",
           location: locationToUse,
+          preferredLanguage,
         }),
       });
 
