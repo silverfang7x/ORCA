@@ -1,6 +1,6 @@
-# ORCA Monorepo Deployment Guide
+# ORCA Monorepo Deployment Guide (Vercel + Render Architecture)
 
-This guide details the step-by-step procedure for deploying the **ORCA Marine Intelligence Platform** monorepo to production.
+This guide details the step-by-step procedure for deploying the **ORCA Marine Intelligence Platform** using separate, reliable frontend (Vercel) and backend (Render) Web Services.
 
 ---
 
@@ -10,107 +10,99 @@ This guide details the step-by-step procedure for deploying the **ORCA Marine In
                         +----------------------------+
                         |   Vercel (Frontend App)    |
                         |   Next.js (App Router)     |
+                        |   orca-frontend-ten.vercel |
                         +--------------+-------------+
                                        |
-                                       | HTTP / REST API
+                                       | REST / SSE API Requests
                                        v
                         +----------------------------+
-                        |  Render / Railway (Backend)|
+                        |   Render (Backend Service) |
                         |  Express + LangGraph Node  |
+                        |   orca-backend.onrender.com|
                         +----------------------------+
 ```
 
-* **Frontend**: Next.js App Router deployed on **Vercel**.
-* **Backend**: Express + LangGraph Multi-Agent Server deployed on **Render** or **Railway**.
-* **Shared Package**: `@orca/shared` (TypeScript type definitions) automatically built prior to both frontend and backend compilation.
+* **Frontend**: Next.js App Router deployed as a single standard project on **Vercel**.
+* **Backend**: Express + LangGraph Multi-Agent Server deployed as a standalone Web Service on **Render**.
+* **Shared Package**: `@orca/shared` (TypeScript type definitions) automatically compiled during monorepo builds.
 
 ---
 
-## 2. Monorepo Build Scripts
+## 2. Step-by-Step Deployment Guide
 
-Root `package.json` includes pre-configured monorepo build commands:
+### Step A: Deploy `backend/` to Render as a Web Service
 
-* `npm run build:shared`: Compiles `packages/shared` TypeScript types.
-* `npm run build:backend`: Compiles `@orca/shared` first, then builds `backend/src` via `tsc`.
-* `npm run build:frontend`: Compiles `@orca/shared` first, then runs `next build` inside `frontend/`.
-* `npm run build`: Compiles all packages (shared, backend, and frontend).
-
----
-
-## 3. Step 1: Deploying Backend (Render / Railway)
-
-### Option A: Render (Automated via `render.yaml`)
-
-1. Connect your GitHub repository to **Render**.
-2. Render will automatically detect the root [`render.yaml`](file:///c:/Users/silverfang/Desktop/orca/ORCA/render.yaml) blueprint.
-3. Configure the following **Environment Variables** in the Render Dashboard:
-
-| Variable | Description | Example / Required |
-| :--- | :--- | :--- |
-| `PORT` | HTTP Listening Port | `10000` (Render default) |
-| `GROQ_API_KEY` | Groq Cloud LLM API Key for LangGraph agents | `gsk_...` **(Required)** |
-| `BHASHINI_API_KEY` | Bhashini Multilingual Translation API Key | `bhash_...` *(Optional fallback)* |
-| `CORS_ORIGIN` | Allowed origin for frontend requests | `https://your-app.vercel.app` |
-
-4. Render Configuration Summary:
-   * **Root Directory**: `.`
+1. Log into your **Render Dashboard** ([dashboard.render.com](https://dashboard.render.com)).
+2. Click **New +** $\rightarrow$ **Web Service**.
+3. Connect your GitHub repository (`silverfang7x/ORCA`).
+4. Configure the Web Service settings:
+   * **Name**: `orca-backend` (or your preferred service name)
+   * **Region**: Oregon (US West) or Frankfurt (closest to your users)
+   * **Root Directory**: `.` (leave as root directory)
+   * **Runtime**: `Node`
    * **Build Command**: `npm run build:backend`
    * **Start Command**: `npm --workspace=backend run start`
+   * **Instance Type**: Free or Starter
+5. Environment Variables in Render:
+   Add the following variables under the **Environment** tab:
 
-### Option B: Railway (Manual Config)
+   | Environment Variable | Recommended Value / Notes |
+   | :--- | :--- |
+   | `PORT` | `10000` (Render default listening port) |
+   | `GROQ_API_KEY` | Your Groq Cloud API Key (`gsk_...`) |
+   | `BHASHINI_USER_ID` | Bhashini ULCA User ID |
+   | `BHASHINI_ULCA_API_KEY` | Bhashini ULCA API Key |
+   | `CORS_ORIGIN` | `https://orca-frontend-ten.vercel.app` |
 
-1. Create a new service from your GitHub repo.
-2. Set **Root Directory**: `.` (or `backend`).
-3. Set **Build Command**: `npm run build:backend`.
-4. Set **Start Command**: `npm --workspace=backend run start`.
-5. Add environment variables: `GROQ_API_KEY`, `CORS_ORIGIN`, `PORT`.
-
-Once deployed, copy your backend URL (e.g. `https://orca-backend.onrender.com`).
-
----
-
-## 4. Step 2: Deploying Frontend (Vercel)
-
-1. Import your GitHub repository in **Vercel**.
-2. Vercel will automatically detect Next.js.
-3. Project Settings Configuration:
-   * **Framework Preset**: Next.js
-   * **Root Directory**: `frontend` (or `.` if using root `vercel.json`)
-   * **Build Command**: `cd .. && npm run build:frontend` (or `npm run build:frontend`)
-   * **Output Directory**: `.next`
-4. Configure **Environment Variables** in Vercel:
-
-| Variable | Description | Value |
-| :--- | :--- | :--- |
-| `NEXT_PUBLIC_API_URL` | Public API URL of deployed Express backend | `https://orca-backend.onrender.com` |
-
-5. Click **Deploy**. Vercel will build `@orca/shared` and produce an optimized production bundle.
+6. Click **Create Web Service**. Wait 2–3 minutes for Render to run `npm run build:backend` and start the Express server.
 
 ---
 
-## 5. Step 3: Configure Backend CORS
+### Step B: Copy the Render Backend URL
 
-After your Vercel deployment completes, update the `CORS_ORIGIN` environment variable on your backend host (Render or Railway) to allow incoming API requests from your live Vercel domain:
-
-```env
-CORS_ORIGIN=https://orca-frontend.vercel.app,http://localhost:3000
-```
-
-The backend dynamically checks `CORS_ORIGIN` or `FRONTEND_URL` on every incoming request to ensure security while supporting multi-domain setups.
+1. Once the deployment status turns green (**Live**), copy the web service URL from the top of your Render dashboard.
+2. Example Render URL: `https://orca-backend-xyz.onrender.com`
+3. Verify backend health by visiting `https://orca-backend-xyz.onrender.com/health` in your browser. It should return `{"status":"ok"}`.
 
 ---
 
-## 6. Local Verification Commands
+### Step C: Set `NEXT_PUBLIC_API_URL` in Vercel Project Settings
 
-To test production builds locally before pushing:
+1. Log into your **Vercel Dashboard** ([vercel.com](https://vercel.com)).
+2. Open your frontend project (`orca-frontend-ten`).
+3. Navigate to **Settings** $\rightarrow$ **Environment Variables**.
+4. Add or update the following environment variable:
+   * **Key**: `NEXT_PUBLIC_API_URL`
+   * **Value**: `https://orca-backend-xyz.onrender.com` (your exact copied Render URL from Step B without trailing slash)
+   * **Environments**: Check **Production**, **Preview**, and **Development**.
+5. Click **Save**.
+
+---
+
+### Step D: Redeploy Vercel Frontend
+
+Because Next.js embeds `NEXT_PUBLIC_*` environment variables into the client-side JavaScript bundle during build time, you **must trigger a new build**:
+
+1. In your Vercel project dashboard, go to the **Deployments** tab.
+2. Click the `...` (three dots) menu next to the latest deployment and select **Redeploy**.
+3. (Alternatively, push a new commit to `main`).
+4. Once Vercel completes the build, open [https://orca-frontend-ten.vercel.app/fisherman/chat](https://orca-frontend-ten.vercel.app/fisherman/chat) and send a query.
+5. Open DevTools Network tab: verify requests are hitting `https://orca-backend-xyz.onrender.com/api/query/stream` directly with HTTP 200 responses!
+
+---
+
+## 3. Local Verification Commands
+
+To test production builds locally:
 
 ```bash
-# Build backend
+# Build shared and backend packages
 npm run build:backend
 
-# Test backend start
+# Run standalone backend server locally on port 4000
 npm --workspace=backend run start
 
-# Build frontend
+# In a separate terminal, build and run frontend locally
 npm run build:frontend
+npm --workspace=frontend run start
 ```

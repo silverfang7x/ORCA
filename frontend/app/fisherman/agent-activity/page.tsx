@@ -42,8 +42,10 @@ export default function AgentActivityPage() {
     setFinalResult(null);
     setErrorMsg(null);
 
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+
     try {
-      const response = await fetch("/api/query/stream", {
+      const response = await fetch(`${apiUrl}/api/query/stream`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

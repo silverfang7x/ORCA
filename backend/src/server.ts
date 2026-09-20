@@ -9,13 +9,28 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 4000;
 
+const defaultAllowedOrigins = [
+  'https://orca-frontend-ten.vercel.app',
+  'http://localhost:3000',
+  'http://localhost:3001',
+  'http://localhost:4000'
+];
+
 const allowedOriginsEnv = process.env.CORS_ORIGIN || process.env.FRONTEND_URL;
+const allowedOrigins = allowedOriginsEnv
+  ? allowedOriginsEnv.includes(',')
+    ? allowedOriginsEnv.split(',').map((o) => o.trim())
+    : [allowedOriginsEnv.trim()]
+  : defaultAllowedOrigins;
+
 const corsOptions: cors.CorsOptions = {
-  origin: allowedOriginsEnv
-    ? allowedOriginsEnv.includes(',')
-      ? allowedOriginsEnv.split(',').map((o) => o.trim())
-      : allowedOriginsEnv.trim()
-    : '*',
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes('*') || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(null, true);
+    }
+  },
   credentials: true,
 };
 
@@ -218,10 +233,8 @@ app.get('/api/history', (req: Request, res: Response) => {
   }
 });
 
-if (!process.env.VERCEL) {
-  app.listen(PORT, () => {
-    console.log(`ORCA Backend server listening on port ${PORT}`);
-  });
-}
+app.listen(PORT, () => {
+  console.log(`ORCA Backend server listening on port ${PORT}`);
+});
 
 export default app;

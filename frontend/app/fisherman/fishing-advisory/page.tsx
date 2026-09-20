@@ -72,7 +72,8 @@ export default function FishingAdvisoryPage() {
     }
 
     try {
-      const res = await fetch("/api/query", {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+      const res = await fetch(`${apiUrl}/api/query`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
